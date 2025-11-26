@@ -886,15 +886,25 @@
         width: 3.4rem;
       }
 
-      .window {
-        left: 0 !important;
-        top: 0 !important;
-        width: 100vw !important;
-        max-width: 100vw;
-        height: calc(100vh - 2.5rem);
-        max-height: calc(100vh - 2.5rem);
-        border-radius: 0;
-      }
+.window {
+  position: absolute;
+  min-width: min(18rem, 95vw);
+  max-width: min(28rem, 95vw);
+  min-height: 9rem;
+  max-height: calc(100vh - 3.5rem);
+  background: var(--window-bg);
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.75);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pop 0.15s ease-out;
+
+  /* ⇩⇩⇩ AJOUT ⇩⇩⇩ */
+  resize: both; /* poignée de redimensionnement en bas à droite */
+}
+
 
       .window-titlebar {
         height: 2.4rem;
@@ -945,10 +955,12 @@
           <div class="window-dot"></div>
         </div>
         <div class="window-title"></div>
-        <div class="window-buttons">
-          <button class="window-btn" data-action="minimize">▁</button>
-          <button class="window-btn" data-action="close">✕</button>
-        </div>
+      <div class="window-buttons">
+        <button class="window-btn" data-action="minimize">▁</button>
+        <button class="window-btn" data-action="maximize">▢</button>
+        <button class="window-btn" data-action="close">✕</button>
+      </div>
+
       </div>
       <div class="window-content"></div>
     </div>
@@ -1054,9 +1066,20 @@
       win.style.top  = top + "px";
     }
 
-    window.addEventListener("resize", () => {
-      Object.values(STATE.windows).forEach(w => clampWindowToViewport(w.element));
-    });
+window.addEventListener("resize", () => {
+  const taskbarHeight = 40;
+  Object.values(STATE.windows).forEach(w => {
+    if (w.maximized) {
+      w.element.style.left = "0px";
+      w.element.style.top = "0px";
+      w.element.style.width = window.innerWidth + "px";
+      w.element.style.height = (window.innerHeight - taskbarHeight) + "px";
+    } else {
+      clampWindowToViewport(w.element);
+    }
+  });
+});
+
 
     function createWindow(appConfig) {
       const existing = STATE.windows[appConfig.id];
@@ -1080,16 +1103,19 @@
       const contentEl = tpl.querySelector(".window-content");
       appConfig.open(contentEl);
 
-      tpl.querySelectorAll(".window-btn").forEach(btn => {
-        const action = btn.dataset.action;
-        btn.addEventListener("click", () => {
-          if (action === "close") {
-            closeWindow(appConfig.id);
-          } else if (action === "minimize") {
-            tpl.style.display = "none";
-          }
-        });
-      });
+tpl.querySelectorAll(".window-btn").forEach(btn => {
+  const action = btn.dataset.action;
+  btn.addEventListener("click", () => {
+    if (action === "close") {
+      closeWindow(appConfig.id);
+    } else if (action === "minimize") {
+      tpl.style.display = "none";
+    } else if (action === "maximize") {
+      toggleMaximizeWindow(appConfig.id);
+    }
+  });
+});
+
 
       tpl.addEventListener("mousedown", () => bringToFront(tpl));
 
@@ -1115,11 +1141,14 @@
       });
       $taskWindows.appendChild(tbBtn);
 
-      STATE.windows[appConfig.id] = {
-        element: tpl,
-        taskButton: tbBtn,
-        config: appConfig
-      };
+STATE.windows[appConfig.id] = {
+  element: tpl,
+  taskButton: tbBtn,
+  config: appConfig,
+  maximized: false,
+  prevBounds: null
+};
+
 
       return tpl;
     }
@@ -1131,6 +1160,48 @@
       win.taskButton.remove();
       delete STATE.windows[appId];
     }
+
+    function toggleMaximizeWindow(appId) {
+  const winEntry = STATE.windows[appId];
+  if (!winEntry) return;
+  const win = winEntry.element;
+
+  const taskbarHeight = 40; // hauteur approximative de la taskbar
+
+  if (!winEntry.maximized) {
+    // On sauvegarde la position/taille actuelle
+    const rect = win.getBoundingClientRect();
+    winEntry.prevBounds = {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    };
+
+    // On passe en plein écran (sans chevaucher la taskbar)
+    win.style.left = "0px";
+    win.style.top = "0px";
+    win.style.width = window.innerWidth + "px";
+    win.style.height = (window.innerHeight - taskbarHeight) + "px";
+    win.style.borderRadius = window.innerWidth <= 600 ? "0" : "0.4rem";
+
+    winEntry.maximized = true;
+  } else {
+    // On restaure la position/taille précédente
+    const b = winEntry.prevBounds;
+    if (b) {
+      win.style.left = b.left + "px";
+      win.style.top = b.top + "px";
+      win.style.width = b.width + "px";
+      win.style.height = b.height + "px";
+    }
+    win.style.borderRadius = window.innerWidth <= 600 ? "0" : "1rem";
+
+    winEntry.maximized = false;
+    clampWindowToViewport(win);
+  }
+}
+
 
     function makeWindowDraggable(win) {
       if (window.innerWidth <= 600) return; // mobile : plein écran
@@ -1149,6 +1220,29 @@
         offsetY = e.clientY - rect.top;
         document.body.style.userSelect = "none";
       });
+
+      titlebar.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".window-buttons")) return;
+
+  const appId = win.dataset.appId;
+  const entry = STATE.windows[appId];
+  if (entry && entry.maximized) {
+    // option 1 : on ne permet pas de drag en mode maximisé
+    return;
+
+    // option 2 (si tu veux : drag = sortir du mode max) :
+    // toggleMaximizeWindow(appId);
+    // (et on laisse la suite continuer)
+  }
+
+  isDragging = true;
+  bringToFront(win);
+  const rect = win.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+  document.body.style.userSelect = "none";
+});
+
 
       document.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
