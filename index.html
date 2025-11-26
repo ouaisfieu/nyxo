@@ -781,6 +781,26 @@
     const FILE_REGISTRY = {};
     let FILE_ID_COUNTER = 0;
 
+const OXYN_STATE = {
+  file: null,
+  path: null,
+  text: null,
+  isText: false,
+  editMode: false
+};
+
+const OXYN_DOM = {
+  meta: null,
+  body: null,
+  scanBtn: null,
+  editBtn: null,
+  exportBtn: null,
+  fileInput: null
+};
+
+
+
+    
     const APPS = [
       {
         id: "about",
