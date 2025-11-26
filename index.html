@@ -489,7 +489,7 @@
       text-shadow: 0 0 4px rgba(0,0,0,0.8);
     }
 
-    /* APPLI : VISIONNEUSE */
+    /* APPLI : VISIONNEUSE / OXYN - base viewer */
 
     .viewer-header {
       font-size: 0.8rem;
@@ -531,6 +531,54 @@
       max-width: 100%;
       max-height: 16rem;
       border-radius: 0.5rem;
+    }
+
+    /* OXYN : toolbar + édition */
+
+    .oxyn-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.4rem;
+      align-items: center;
+    }
+
+    .oxyn-toolbar > * {
+      font-size: 0.78rem;
+    }
+
+    .oxyn-meta {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      opacity: 0.8;
+      word-break: break-all;
+    }
+
+    .oxyn-body {
+      margin-top: 0.4rem;
+    }
+
+    .oxyn-body .viewer-box {
+      max-height: 16rem;
+    }
+
+    .oxyn-editor textarea {
+      width: 100%;
+      min-height: 12rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.65);
+      color: #f5f5f5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      padding: 0.5rem;
+      resize: vertical;
+    }
+
+    .oxyn-editor textarea:focus {
+      outline: 1px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.8),
+                  0 0 12px rgba(76,175,80,0.55);
     }
 
     /* APPLI : MODE KALI */
@@ -781,26 +829,24 @@
     const FILE_REGISTRY = {};
     let FILE_ID_COUNTER = 0;
 
-const OXYN_STATE = {
-  file: null,
-  path: null,
-  text: null,
-  isText: false,
-  editMode: false
-};
+    // État global pour Oxyn
+    const OXYN_STATE = {
+      file: null,
+      path: null,
+      text: null,
+      isText: false,
+      editMode: false
+    };
 
-const OXYN_DOM = {
-  meta: null,
-  body: null,
-  scanBtn: null,
-  editBtn: null,
-  exportBtn: null,
-  fileInput: null
-};
+    const OXYN_DOM = {
+      meta: null,
+      body: null,
+      scanBtn: null,
+      editBtn: null,
+      exportBtn: null,
+      fileInput: null
+    };
 
-
-
-    
     const APPS = [
       {
         id: "about",
@@ -821,12 +867,11 @@ const OXYN_DOM = {
         open: createExplorerApp
       },
       {
-  id: "viewer",
-  name: "Oxyn",
-  icon: "🧬",
-  open: createViewerApp
-},
-,
+        id: "viewer",
+        name: "Oxyn",
+        icon: "🧬",
+        open: createViewerApp
+      },
       {
         id: "cyber",
         name: "Alerte Cyber",
@@ -1100,7 +1145,7 @@ const OXYN_DOM = {
       setTimeout(() => textarea.focus(), 0);
     }
 
-    // === VISIONNEUSE : RENDU DE FICHIERS ====================================
+    // === VISIONNEUSE / OXYN =================================================
 
     function openFileInViewer(fileId, path) {
       const file = FILE_REGISTRY[fileId];
@@ -1121,224 +1166,358 @@ const OXYN_DOM = {
       renderFileInViewer(container, file, path);
     }
 
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
     function renderFileInViewer(container, file, path) {
-  // Si Oxyn est bien initialisé (depuis createViewerApp)
-  const metaEl = container.querySelector("#oxynMeta");
-  const bodyEl = container.querySelector("#oxynBody");
+      // essayer mode Oxyn (DOM déjà construit par createViewerApp)
+      const metaEl = container.querySelector("#oxynMeta");
+      const bodyEl = container.querySelector("#oxynBody");
 
-  // Si on ne trouve pas la structure Oxyn (par ex. appel depuis autre page),
-  // on retombe sur le comportement ancien
-  if (!metaEl || !bodyEl) {
-    // === FALLBACK ANCIEN COMPORTEMENT ===
-    const name = file.name.toLowerCase();
-    const type = file.type || "";
-    const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
-    const sizeKB = (file.size / 1024).toFixed(1);
+      if (!metaEl || !bodyEl) {
+        // === fallback ancien comportement (au cas où) ===
+        const name = file.name.toLowerCase();
+        const type = file.type || "";
+        const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
+        const sizeKB = (file.size / 1024).toFixed(1);
 
-    const isImage = type.startsWith("image/") ||
-                    ["png","jpg","jpeg","gif","webp","svg"].includes(ext);
-    const isAudio = type.startsWith("audio/") ||
-                    ["mp3","wav","ogg"].includes(ext);
-    const isVideo = type.startsWith("video/") ||
-                    ["mp4","webm","ogv"].includes(ext);
-    const isPdf   = type === "application/pdf" || ext === "pdf";
-    const isText  =
-      type.startsWith("text/") ||
-      ["txt","md","json","csv","html","css","js"].includes(ext);
+        const isImage = type.startsWith("image/") ||
+                        ["png","jpg","jpeg","gif","webp","svg"].includes(ext);
+        const isAudio = type.startsWith("audio/") ||
+                        ["mp3","wav","ogg"].includes(ext);
+        const isVideo = type.startsWith("video/") ||
+                        ["mp4","webm","ogv"].includes(ext);
+        const isPdf   = type === "application/pdf" || ext === "pdf";
+        const isText  =
+          type.startsWith("text/") ||
+          ["txt","md","json","csv","html","css","js"].includes(ext);
 
-    const baseHeader = `
-      <div class="viewer-header"><strong>${path}</strong></div>
-      <div class="viewer-meta">
-        Nom : ${file.name} · Taille : ${sizeKB} ko
-      </div>
-    `;
+        const baseHeader = `
+          <div class="viewer-header"><strong>${path}</strong></div>
+          <div class="viewer-meta">
+            Nom : ${file.name} · Taille : ${sizeKB} ko
+          </div>
+        `;
 
-    if (isImage) {
-      const url = URL.createObjectURL(file);
-      container.innerHTML = baseHeader + `
-        <div class="viewer-image-wrap">
-          <img src="${url}" alt="${file.name}">
-        </div>
-      `;
-      return;
-    }
+        if (isImage) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-image-wrap">
+              <img src="${url}" alt="${file.name}">
+            </div>
+          `;
+          return;
+        }
 
-    if (isAudio) {
-      const url = URL.createObjectURL(file);
-      container.innerHTML = baseHeader + `
+        if (isAudio) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box">
+              <audio controls style="width:100%;">
+                <source src="${url}">
+                Ton navigateur ne supporte pas l’élément audio.
+              </audio>
+            </div>
+          `;
+          return;
+        }
+
+        if (isVideo) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box">
+              <video controls style="width:100%;max-height:14rem;">
+                <source src="${url}">
+                Ton navigateur ne supporte pas l’élément vidéo.
+              </video>
+            </div>
+          `;
+          return;
+        }
+
+        if (isPdf) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box" style="padding:0;max-height:none;">
+              <embed src="${url}" type="application/pdf"
+                     style="width:100%;height:18rem;border-radius:0.75rem;">
+              </embed></div>
+            <div class="helper-text" style="margin-top:0.3rem;">
+              Si le PDF ne s’affiche pas, essaie un autre navigateur ou
+              télécharge le fichier depuis l’explorateur classique.
+            </div>
+          `;
+          return;
+        }
+
+        if (isText) {
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box">
+              <pre id="viewerText"></pre>
+            </div>
+          `;
+          const pre = container.querySelector("#viewerText");
+          const reader = new FileReader();
+          reader.onload = () => {
+            pre.textContent = reader.result;
+          };
+          reader.onerror = () => {
+            pre.textContent = "[Erreur de lecture du fichier texte]";
+          };
+          reader.readAsText(file, "utf-8");
+          return;
+        }
+
+        container.innerHTML = baseHeader + `
+          <div class="viewer-box">
+            <p>Type non géré pour la prévisualisation.</p>
+            <p class="helper-text">
+              Extension : <code>.${ext || "?"}</code> — type MIME : <code>${type || "inconnu"}</code>.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      // === MODE OXYN COMPLET ===
+      const name = file.name.toLowerCase();
+      const type = file.type || "";
+      const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
+      const sizeKB = (file.size / 1024).toFixed(1);
+
+      const isImage = type.startsWith("image/") ||
+                      ["png","jpg","jpeg","gif","webp","svg"].includes(ext);
+      const isAudio = type.startsWith("audio/") ||
+                      ["mp3","wav","ogg"].includes(ext);
+      const isVideo = type.startsWith("video/") ||
+                      ["mp4","webm","ogv"].includes(ext);
+      const isPdf   = type === "application/pdf" || ext === "pdf";
+      const isText  =
+        type.startsWith("text/") ||
+        ["txt","md","json","csv","html","css","js"].includes(ext);
+
+      OXYN_STATE.file = file;
+      OXYN_STATE.path = path;
+      OXYN_STATE.isText = isText;
+      OXYN_STATE.editMode = false;
+      OXYN_STATE.text = null;
+
+      metaEl.textContent = `Fichier : ${path} · ${type || "type inconnu"} · ${sizeKB} ko`;
+
+      if (OXYN_DOM.scanBtn) OXYN_DOM.scanBtn.disabled = false;
+      if (OXYN_DOM.exportBtn) OXYN_DOM.exportBtn.disabled = false;
+      if (OXYN_DOM.editBtn) {
+        OXYN_DOM.editBtn.disabled = !isText;
+        OXYN_DOM.editBtn.textContent = "✏️ Éditer";
+      }
+
+      if (isImage) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <div class="viewer-image-wrap">
+              <img src="${url}" alt="${file.name}">
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (isAudio) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <audio controls style="width:100%;">
+              <source src="${url}">
+              Ton navigateur ne supporte pas l’élément audio.
+            </audio>
+          </div>
+        `;
+        return;
+      }
+
+      if (isVideo) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <video controls style="width:100%;max-height:14rem;">
+              <source src="${url}">
+              Ton navigateur ne supporte pas l’élément vidéo.
+            </video>
+          </div>
+        `;
+        return;
+      }
+
+      if (isPdf) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box" style="padding:0;max-height:none;">
+            <embed src="${url}" type="application/pdf"
+                   style="width:100%;height:18rem;border-radius:0.75rem;">
+            </embed></div>
+        `;
+        return;
+      }
+
+      if (isText) {
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <pre id="oxynTextView">Chargement du texte...</pre>
+          </div>
+        `;
+        const pre = bodyEl.querySelector("#oxynTextView");
+        const reader = new FileReader();
+        reader.onload = () => {
+          OXYN_STATE.text = reader.result;
+          if (pre) pre.textContent = OXYN_STATE.text;
+        };
+        reader.onerror = () => {
+          if (pre) pre.textContent = "[Erreur de lecture du fichier texte]";
+        };
+        reader.readAsText(file, "utf-8");
+        return;
+      }
+
+      bodyEl.innerHTML = `
         <div class="viewer-box">
-          <audio controls style="width:100%;">
-            <source src="${url}">
-            Ton navigateur ne supporte pas l’élément audio.
-          </audio>
+          <p>Type non géré pour la prévisualisation.</p>
+          <p class="helper-text">
+            Extension : <code>.${ext || "?"}</code> — type MIME : <code>${type || "inconnu"}</code>.
+          </p>
         </div>
       `;
-      return;
     }
 
-    if (isVideo) {
-      const url = URL.createObjectURL(file);
-      container.innerHTML = baseHeader + `
-        <div class="viewer-box">
-          <video controls style="width:100%;max-height:14rem;">
-            <source src="${url}">
-            Ton navigateur ne supporte pas l’élément vidéo.
-          </video>
+    function createViewerApp(container) {
+      container.innerHTML = `
+        <p><strong>Oxyn – Visionneuse & éditeur</strong></p>
+        <p class="helper-text">
+          Ouvre un fichier via l’Explorateur ou importe un fichier local.
+          Pour les fichiers texte, tu peux éditer et exporter une copie.
+        </p>
+
+        <div class="oxyn-toolbar">
+          <button class="btn-ghost" id="oxynImportBtn">📥 Importer un fichier</button>
+          <button class="btn-ghost" id="oxynScanBtn" disabled>🔎 Scanner</button>
+          <button class="btn-ghost" id="oxynEditBtn" disabled>✏️ Éditer</button>
+          <button class="btn-ghost" id="oxynExportBtn" disabled>💾 Exporter une copie</button>
+          <input type="file" id="oxynFileInput" style="display:none;">
+        </div>
+
+        <div class="oxyn-meta" id="oxynMeta">
+          Aucun fichier chargé pour l’instant.
+        </div>
+
+        <div class="oxyn-body" id="oxynBody">
+          <div class="viewer-box">
+            <p>En attente de fichier…</p>
+          </div>
         </div>
       `;
-      return;
+
+      OXYN_DOM.meta = container.querySelector("#oxynMeta");
+      OXYN_DOM.body = container.querySelector("#oxynBody");
+      OXYN_DOM.scanBtn = container.querySelector("#oxynScanBtn");
+      OXYN_DOM.editBtn = container.querySelector("#oxynEditBtn");
+      OXYN_DOM.exportBtn = container.querySelector("#oxynExportBtn");
+      OXYN_DOM.fileInput = container.querySelector("#oxynFileInput");
+
+      const importBtn = container.querySelector("#oxynImportBtn");
+
+      importBtn.addEventListener("click", () => {
+        OXYN_DOM.fileInput.click();
+      });
+
+      OXYN_DOM.fileInput.addEventListener("change", () => {
+        const file = OXYN_DOM.fileInput.files?.[0];
+        if (!file) return;
+        renderFileInViewer(container, file, file.name);
+      });
+
+      // SCAN
+      OXYN_DOM.scanBtn.addEventListener("click", () => {
+        if (!OXYN_STATE.file) return;
+        const f = OXYN_STATE.file;
+        const sizeKB = (f.size / 1024).toFixed(1);
+        let extra = "";
+
+        if (OXYN_STATE.isText && OXYN_STATE.text != null) {
+          const text = OXYN_STATE.text;
+          const chars = text.length;
+          const lines = text.split(/\r\n|\r|\n/).length;
+          const words = (text.match(/\S+/g) || []).length;
+          extra = `<br><small>Texte : ${words} mot(s), ${lines} ligne(s), ${chars} caractère(s).</small>`;
+        }
+
+        OXYN_DOM.meta.innerHTML =
+          `Fichier : <strong>${OXYN_STATE.path}</strong> · ${(f.type || "type inconnu")} · ${sizeKB} ko${extra}`;
+      });
+
+      // EDITION
+      OXYN_DOM.editBtn.addEventListener("click", () => {
+        if (!OXYN_STATE.isText || OXYN_STATE.text == null) return;
+
+        if (!OXYN_STATE.editMode) {
+          OXYN_STATE.editMode = true;
+          OXYN_DOM.editBtn.textContent = "👁️ Mode lecture";
+
+          OXYN_DOM.body.innerHTML = `
+            <div class="viewer-box oxyn-editor">
+              <textarea id="oxynEditor"></textarea>
+            </div>
+          `;
+          const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+          ta.value = OXYN_STATE.text;
+          ta.focus();
+        } else {
+          const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+          if (ta) {
+            OXYN_STATE.text = ta.value;
+          }
+          OXYN_STATE.editMode = false;
+          OXYN_DOM.editBtn.textContent = "✏️ Éditer";
+
+          OXYN_DOM.body.innerHTML = `
+            <div class="viewer-box">
+              <pre>${escapeHtml(OXYN_STATE.text)}</pre>
+            </div>
+          `;
+        }
+      });
+
+      // EXPORT
+      OXYN_DOM.exportBtn.addEventListener("click", () => {
+        if (!OXYN_STATE.file) return;
+
+        if (OXYN_STATE.isText) {
+          let content = OXYN_STATE.text ?? "";
+          if (OXYN_STATE.editMode) {
+            const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+            if (ta) content = ta.value;
+          }
+          const defName = (OXYN_STATE.file.name || "copie.txt").replace(/(\.[^.]*)?$/, "-oxyn$1");
+          const filename = prompt("Nom du fichier à exporter :", defName) || defName;
+          triggerDownload(filename, "text/plain", content);
+        } else {
+          const defName = (OXYN_STATE.file.name || "fichier.bin").replace(/(\.[^.]*)?$/, "-oxyn$1");
+          const filename = prompt("Nom du fichier à exporter :", defName) || defName;
+          const blob = new Blob([OXYN_STATE.file], { type: OXYN_STATE.file.type || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      });
     }
-
-    if (isPdf) {
-      const url = URL.createObjectURL(file);
-      container.innerHTML = baseHeader + `
-        <div class="viewer-box" style="padding:0;max-height:none;">
-          <embed src="${url}" type="application/pdf"
-                 style="width:100%;height:18rem;border-radius:0.75rem;">
-          </embed></div>
-      `;
-      return;
-    }
-
-    if (isText) {
-      container.innerHTML = baseHeader + `
-        <div class="viewer-box">
-          <pre id="viewerText"></pre>
-        </div>
-      `;
-      const pre = container.querySelector("#viewerText");
-      const reader = new FileReader();
-      reader.onload = () => {
-        pre.textContent = reader.result;
-      };
-      reader.onerror = () => {
-        pre.textContent = "[Erreur de lecture du fichier texte]";
-      };
-      reader.readAsText(file, "utf-8");
-      return;
-    }
-
-    container.innerHTML = baseHeader + `
-      <div class="viewer-box">
-        <p>Type non géré pour la prévisualisation.</p>
-      </div>
-    `;
-    return;
-  }
-
-  // === MODE OXYN COMPLET ===
-
-  const name = file.name.toLowerCase();
-  const type = file.type || "";
-  const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
-  const sizeKB = (file.size / 1024).toFixed(1);
-
-  const isImage = type.startsWith("image/") ||
-                  ["png","jpg","jpeg","gif","webp","svg"].includes(ext);
-  const isAudio = type.startsWith("audio/") ||
-                  ["mp3","wav","ogg"].includes(ext);
-  const isVideo = type.startsWith("video/") ||
-                  ["mp4","webm","ogv"].includes(ext);
-  const isPdf   = type === "application/pdf" || ext === "pdf";
-  const isText  =
-    type.startsWith("text/") ||
-    ["txt","md","json","csv","html","css","js"].includes(ext);
-
-  // stocker l’état courant
-  OXYN_STATE.file = file;
-  OXYN_STATE.path = path;
-  OXYN_STATE.isText = isText;
-  OXYN_STATE.editMode = false;
-  OXYN_STATE.text = null;
-
-  // mettre à jour la meta + boutons
-  metaEl.textContent = `Fichier : ${path} · ${type || "type inconnu"} · ${sizeKB} ko`;
-
-  if (OXYN_DOM.scanBtn) OXYN_DOM.scanBtn.disabled = false;
-  if (OXYN_DOM.exportBtn) OXYN_DOM.exportBtn.disabled = false;
-  if (OXYN_DOM.editBtn) OXYN_DOM.editBtn.disabled = !isText;
-  if (OXYN_DOM.editBtn) OXYN_DOM.editBtn.textContent = "✏️ Éditer";
-
-  // rendu
-  if (isImage) {
-    const url = URL.createObjectURL(file);
-    bodyEl.innerHTML = `
-      <div class="viewer-box">
-        <div class="viewer-image-wrap">
-          <img src="${url}" alt="${file.name}">
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  if (isAudio) {
-    const url = URL.createObjectURL(file);
-    bodyEl.innerHTML = `
-      <div class="viewer-box">
-        <audio controls style="width:100%;">
-          <source src="${url}">
-          Ton navigateur ne supporte pas l’élément audio.
-        </audio>
-      </div>
-    `;
-    return;
-  }
-
-  if (isVideo) {
-    const url = URL.createObjectURL(file);
-    bodyEl.innerHTML = `
-      <div class="viewer-box">
-        <video controls style="width:100%;max-height:14rem;">
-          <source src="${url}">
-          Ton navigateur ne supporte pas l’élément vidéo.
-        </video>
-      </div>
-    `;
-    return;
-  }
-
-  if (isPdf) {
-    const url = URL.createObjectURL(file);
-    bodyEl.innerHTML = `
-      <div class="viewer-box" style="padding:0;max-height:none;">
-        <embed src="${url}" type="application/pdf"
-               style="width:100%;height:18rem;border-radius:0.75rem;">
-        </embed></div>
-    `;
-    return;
-  }
-
-  if (isText) {
-    // lecture asynchrone, puis affichage
-    bodyEl.innerHTML = `
-      <div class="viewer-box">
-        <pre id="oxynTextView">Chargement du texte...</pre>
-      </div>
-    `;
-    const pre = bodyEl.querySelector("#oxynTextView");
-    const reader = new FileReader();
-    reader.onload = () => {
-      OXYN_STATE.text = reader.result;
-      if (pre) pre.textContent = OXYN_STATE.text;
-    };
-    reader.onerror = () => {
-      if (pre) pre.textContent = "[Erreur de lecture du fichier texte]";
-    };
-    reader.readAsText(file, "utf-8");
-    return;
-  }
-
-  // type non géré en prévisualisation
-  bodyEl.innerHTML = `
-    <div class="viewer-box">
-      <p>Type non géré pour la prévisualisation.</p>
-      <p class="helper-text">
-        Extension : <code>.${ext || "?"}</code> — type MIME : <code>${type || "inconnu"}</code>.
-      </p>
-    </div>
-  `;
-}
 
     // === APPLI : EXPLORATEUR ================================================
 
@@ -1445,200 +1624,6 @@ const OXYN_DOM = {
       if (["html","css","js","json"].includes(ext)) return "🧩";
       return "📁";
     }
-
-    // === APPLI : VISIONNEUSE ================================================
-
-function createViewerApp(container) {
-  container.innerHTML = `
-    <p><strong>Oxyn – Visionneuse & éditeur</strong></p>
-    <p class="helper-text">
-      Ouvre un fichier via l’Explorateur ou importe un fichier local.
-      Pour les fichiers texte (txt, md, json, etc.), tu peux éditer et exporter une copie.
-    </p>
-
-    <div class="oxyn-toolbar">
-      <button class="btn-ghost" id="oxynImportBtn">📥 Importer un fichier</button>
-      <button class="btn-ghost" id="oxynScanBtn" disabled>🔎 Scanner</button>
-      <button class="btn-ghost" id="oxynEditBtn" disabled>✏️ Éditer</button>
-      <button class="btn-ghost" id="oxynExportBtn" disabled>💾 Exporter une copie</button>
-      <input type="file" id="oxynFileInput" style="display:none;">
-    </div>
-
-    <div class="oxyn-meta" id="oxynMeta">
-      Aucun fichier chargé pour l’instant.
-    </div>
-
-    <div class="oxyn-body" id="oxynBody">
-      <div class="viewer-box">
-        <p>En attente de fichier…</p>
-      </div>
-    </div>
-  `;
-
-  OXYN_DOM.meta = container.querySelector("#oxynMeta");
-  OXYN_DOM.body = container.querySelector("#oxynBody");
-  OXYN_DOM.scanBtn = container.querySelector("#oxynScanBtn");
-  OXYN_DOM.editBtn = container.querySelector("#oxynEditBtn");
-  OXYN_DOM.exportBtn = container.querySelector("#oxynExportBtn");
-  OXYN_DOM.fileInput = container.querySelector("#oxynFileInput");
-
-  const importBtn = container.querySelector("#oxynImportBtn");
-
-  importBtn.addEventListener("click", () => {
-    OXYN_DOM.fileInput.click();
-  });
-
-  OXYN_DOM.fileInput.addEventListener("change", () => {
-    const file = OXYN_DOM.fileInput.files?.[0];
-    if (!file) return;
-    // Import direct dans Oxyn (sans passer par l’explorateur)
-    renderFileInViewer(container, file, file.name);
-  });
-
-  // SCAN : petit “audit” du fichier chargé
-  OXYN_DOM.scanBtn.addEventListener("click", () => {
-    if (!OXYN_STATE.file) return;
-    const f = OXYN_STATE.file;
-    const sizeKB = (f.size / 1024).toFixed(1);
-    let extra = "";
-
-    if (OXYN_STATE.isText && OXYN_STATE.text != null) {
-      const text = OXYN_STATE.text;
-      const chars = text.length;
-      const lines = text.split(/\r\n|\r|\n/).length;
-      const words = (text.match(/\S+/g) || []).length;
-      extra = `<br><small>Texte : ${words} mot(s), ${lines} ligne(s), ${chars} caractère(s).</small>`;
-    }
-
-    OXYN_DOM.meta.innerHTML =
-      `Fichier : <strong>${OXYN_STATE.path}</strong> · ${(f.type || "type inconnu")} · ${sizeKB} ko${extra}`;
-  });
-
-  // EDITION : bascule lecture / édition (texte uniquement)
-  OXYN_DOM.editBtn.addEventListener("click", () => {
-    if (!OXYN_STATE.isText || OXYN_STATE.text == null) return;
-
-    if (!OXYN_STATE.editMode) {
-      // passer en mode édition
-      OXYN_STATE.editMode = true;
-      OXYN_DOM.editBtn.textContent = "👁️ Mode lecture";
-
-      OXYN_DOM.body.innerHTML = `
-        <div class="viewer-box oxyn-editor">
-          <textarea id="oxynEditor"></textarea>
-        </div>
-      `;
-      const ta = OXYN_DOM.body.querySelector("#oxynEditor");
-      ta.value = OXYN_STATE.text;
-      ta.focus();
-    } else {
-      // revenir en mode lecture
-      const ta = OXYN_DOM.body.querySelector("#oxynEditor");
-      if (ta) {
-        OXYN_STATE.text = ta.value; // on garde la version éditée en mémoire
-      }
-      OXYN_STATE.editMode = false;
-      OXYN_DOM.editBtn.textContent = "✏️ Éditer";
-      // réafficher le texte en lecture seule
-      OXYN_DOM.body.innerHTML = `
-        <div class="viewer-box">
-          <pre>${escapeHtml(OXYN_STATE.text)}</pre>
-        </div>
-      `;
-    }
-  });
-
-  // EXPORT : télécharge une copie du fichier courant (texte édité si en mode édition)
-  OXYN_DOM.exportBtn.addEventListener("click", () => {
-    if (!OXYN_STATE.file) return;
-
-    if (OXYN_STATE.isText) {
-      // texte : version éditée si présente
-      let content = OXYN_STATE.text ?? "";
-      if (OXYN_STATE.editMode) {
-        const ta = OXYN_DOM.body.querySelector("#oxynEditor");
-        if (ta) content = ta.value;
-      }
-      const defName = (OXYN_STATE.file.name || "copie.txt").replace(/(\.[^.]*)?$/, "-oxyn$1");
-      const filename = prompt("Nom du fichier à exporter :", defName) || defName;
-      triggerDownload(filename, "text/plain", content);
-    } else {
-      // binaire : on exporte une copie telle quelle
-      const defName = (OXYN_STATE.file.name || "fichier.bin").replace(/(\.[^.]*)?$/, "-oxyn$1");
-      const filename = prompt("Nom du fichier à exporter :", defName) || defName;
-      const blob = new Blob([OXYN_STATE.file], { type: OXYN_STATE.file.type || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  });
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-
-
-/* APPLI : OXYN – visionneuse/éditeur */
-
-.oxyn-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.4rem;
-  align-items: center;
-}
-
-.oxyn-toolbar > * {
-  font-size: 0.78rem;
-}
-
-.oxyn-meta {
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  opacity: 0.8;
-  word-break: break-all;
-}
-
-.oxyn-body {
-  margin-top: 0.4rem;
-}
-
-.oxyn-body .viewer-box {
-  max-height: 16rem;
-}
-
-.oxyn-editor textarea {
-  width: 100%;
-  min-height: 12rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(0,0,0,0.65);
-  color: #f5f5f5;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.8rem;
-  padding: 0.5rem;
-  resize: vertical;
-}
-
-.oxyn-editor textarea:focus {
-  outline: 1px solid var(--accent);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.8),
-              0 0 12px rgba(76,175,80,0.55);
-}
-
-
-
-    
 
     // === MODE KALI : RAPPORT TECHNIQUE ======================================
 
@@ -1905,39 +1890,6 @@ ${rows}
           autoTimer = null;
           updateStatus("Auto-scan arrêté.");
         }
-      });
-
-      exportButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-          const fmt = btn.dataset.format;
-          if (!currentReport) {
-            alert("Aucun rapport en mémoire. Lance d’abord un scan.");
-            return;
-          }
-          const ts = currentReport.generatedAt.replace(/[:.]/g,"-");
-          let content = "";
-          let mime = "text/plain";
-          let filename = `rapport_nyxo_${fmt}_${ts}.${fmt}`;
-
-          if (fmt === "json") {
-            content = formatReportJSON(currentReport);
-            mime = "application/json";
-          } else if (fmt === "txt") {
-            content = formatReportTXT(currentReport);
-            mime = "text/plain";
-          } else if (fmt === "md") {
-            content = formatReportMD(currentReport);
-            mime = "text/markdown";
-          } else if (fmt === "csv") {
-            content = formatReportCSV(currentReport);
-            mime = "text/csv";
-          } else if (fmt === "html") {
-            content = formatReportHTML(currentReport);
-            mime = "text/html";
-          }
-
-          triggerDownload(filename, mime, content);
-        });
       });
 
       doScan();
