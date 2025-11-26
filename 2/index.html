@@ -1,0 +1,2923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>NYXO – Faux OS en HTML</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --accent: #4caf50;
+      --accent-dark: #2e7d32;
+      --bg-desktop: radial-gradient(circle at top left, #202840, #050813);
+      --text: #f5f5f5;
+      --window-bg: #121826;
+      --taskbar-bg: rgba(8, 10, 20, 0.95);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   Roboto, sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BUREAU */
+
+    #desktop {
+      position: relative;
+      flex: 1;
+      background: var(--bg-desktop);
+      background-size: cover;
+      padding: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 0.5rem;
+    }
+
+    .desktop-icon {
+      width: 4.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, background 0.15s ease;
+      border-radius: 0.75rem;
+      padding: 0.3rem 0.25rem;
+    }
+
+    .desktop-icon:hover {
+      background: rgba(255,255,255,0.06);
+      transform: translateY(-2px);
+    }
+
+    .desktop-icon:active {
+      transform: scale(0.96);
+      background: rgba(255,255,255,0.09);
+    }
+
+    .desktop-icon-emoji {
+      font-size: 1.6rem;
+      margin-bottom: 0.25rem;
+      text-shadow: 0 0 6px rgba(0,0,0,0.6);
+    }
+
+    .desktop-icon-label {
+      font-size: 0.72rem;
+      line-height: 1.2;
+      text-shadow: 0 0 3px rgba(0,0,0,0.9);
+      word-break: break-word;
+    }
+
+    /* BARRE DES TÂCHES */
+
+    #taskbar {
+      height: 2.5rem;
+      background: var(--taskbar-bg);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      padding: 0 0.4rem;
+      gap: 0.4rem;
+      backdrop-filter: blur(12px);
+    }
+
+    #startBtn {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.4),
+                  0 6px 16px rgba(0,0,0,0.42);
+      font-size: 0.85rem;
+    }
+
+    #startBtn span.logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 0.3rem;
+      background: radial-gradient(circle at 30% 20%, #fff, #00ffb3 60%, #006cff 100%);
+      box-shadow: 0 0 8px rgba(0,255,179,0.7);
+      font-size: 0.7rem;
+    }
+
+    #startBtn:active {
+      background: var(--accent-dark);
+      transform: translateY(1px);
+    }
+
+    #taskbar-windows {
+      flex: 1;
+      display: flex;
+      gap: 0.25rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    #taskbar-windows::-webkit-scrollbar {
+      display: none;
+    }
+
+    .taskbar-item {
+      border: none;
+      background: transparent;
+      color: #f5f5f5;
+      font-size: 0.78rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      opacity: 0.8;
+      white-space: nowrap;
+    }
+
+    .taskbar-item.active {
+      background: rgba(255,255,255,0.08);
+      opacity: 1;
+    }
+
+    .taskbar-item span.icon {
+      font-size: 1rem;
+    }
+
+    #clock {
+      min-width: 3.5rem;
+      text-align: right;
+      font-size: 0.75rem;
+      opacity: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* MENU DEMARRER */
+
+    #startMenu {
+      position: fixed;
+      left: 0.4rem;
+      bottom: 2.7rem;
+      width: min(18rem, 90vw);
+      background: rgba(5, 8, 20, 0.98);
+      border-radius: 1rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.65);
+      padding: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(14px);
+      z-index: 10000;
+    }
+
+    #startMenu.hidden {
+      display: none;
+    }
+
+    .start-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+      margin-bottom: 0.35rem;
+    }
+
+    .start-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+      gap: 0.4rem;
+    }
+
+    .start-app {
+      border-radius: 0.9rem;
+      background: rgba(255,255,255,0.04);
+      padding: 0.4rem 0.5rem;
+      cursor: pointer;
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      font-size: 0.8rem;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .start-app:hover {
+      background: rgba(255,255,255,0.09);
+      transform: translateY(-1px);
+    }
+
+    .start-app span.icon {
+      font-size: 1.25rem;
+    }
+
+    .start-app span.label {
+      display: block;
+      line-height: 1.3;
+    }
+
+    .start-footer {
+      margin-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 0.4rem;
+      font-size: 0.7rem;
+      opacity: 0.7;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* FENÊTRES */
+
+    .window {
+      position: absolute;
+      min-width: min(18rem, 95vw);
+      max-width: min(28rem, 95vw);
+      min-height: 9rem;
+      max-height: calc(100vh - 3.5rem);
+      background: var(--window-bg);
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.75);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: pop 0.15s ease-out;
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0.94) translateY(8px);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .window-titlebar {
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      padding: 0 0.6rem;
+      gap: 0.4rem;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.12), rgba(0,0,0,0.85));
+      cursor: move;
+      user-select: none;
+    }
+
+    .window-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 999px;
+      background: #ff5f57;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.7),
+        0 0 10px rgba(255,95,87,0.5);
+    }
+
+    .window-dot:nth-child(2) {
+      background: #febc2e;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.7),
+        0 0 10px rgba(254,188,46,0.5);
+    }
+
+    .window-dot:nth-child(3) {
+      background: #28c840;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.7),
+        0 0 10px rgba(40,200,64,0.5);
+    }
+
+    .window-title {
+      flex: 1;
+      text-align: center;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    .window-buttons {
+      display: flex;
+      gap: 0.2rem;
+    }
+
+    .window-btn {
+      border: none;
+      background: transparent;
+      color: #fff;
+      width: 1.3rem;
+      height: 1.3rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+    }
+
+    .window-btn:hover {
+      background: rgba(255,255,255,0.12);
+      opacity: 1;
+    }
+
+    .window-content {
+      padding: 0.6rem 0.7rem;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      flex: 1;
+      overflow: auto;
+    }
+
+    /* BLOC-NOTES */
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 8rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.45);
+      padding: 0.5rem;
+      color: #f5f5f5;
+      resize: vertical;
+      font-size: 0.8rem;
+    }
+
+    .notes-textarea:focus {
+      outline: 1px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.8),
+                  0 0 12px rgba(76,175,80,0.55);
+    }
+
+    .btn-primary {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      margin-top: 0.35rem;
+    }
+
+    .btn-primary:active {
+      background: var(--accent-dark);
+      transform: translateY(1px);
+    }
+
+    .helper-text {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+
+    .btn-ghost {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.4);
+      color: #f5f5f5;
+      font-size: 0.78rem;
+      padding: 0.25rem 0.6rem;
+      cursor: pointer;
+    }
+
+    .btn-ghost:active {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* EXPLORATEUR */
+
+    .file-toolbar {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 0.35rem 0;
+    }
+
+    .file-list {
+      list-style: none;
+      margin-top: 0.2rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.14);
+      overflow: hidden;
+      max-height: 13rem;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      padding: 0.3rem 0.5rem;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+    }
+
+    .file-item:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-item span.icon {
+      font-size: 1rem;
+    }
+
+    .file-item.active {
+      background: rgba(76, 175, 80, 0.25);
+    }
+
+    .file-meta {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    .file-empty {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.4rem;
+    }
+
+    /* PARAMÈTRES */
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+
+    .settings-swatch {
+      height: 2rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .settings-swatch span {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+
+    /* OXYN – VISIONNEUSE / ÉDITEUR */
+
+    .viewer-header {
+      font-size: 0.8rem;
+      margin-bottom: 0.3rem;
+      opacity: 0.85;
+      word-break: break-all;
+    }
+
+    .viewer-meta {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-bottom: 0.3rem;
+    }
+
+    .viewer-box {
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.55);
+      padding: 0.4rem;
+      max-height: 16rem;
+      overflow: auto;
+    }
+
+    .viewer-box pre {
+      white-space: pre-wrap;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+    }
+
+    .viewer-image-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-height: 16rem;
+      overflow: auto;
+    }
+
+    .viewer-image-wrap img {
+      max-width: 100%;
+      max-height: 16rem;
+      border-radius: 0.5rem;
+    }
+
+    .oxyn-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.4rem;
+      align-items: center;
+    }
+
+    .oxyn-toolbar > * {
+      font-size: 0.78rem;
+    }
+
+    .oxyn-meta {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      opacity: 0.8;
+      word-break: break-all;
+    }
+
+    .oxyn-body {
+      margin-top: 0.4rem;
+    }
+
+    .oxyn-editor textarea {
+      width: 100%;
+      min-height: 12rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.65);
+      color: #f5f5f5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      padding: 0.5rem;
+      resize: vertical;
+    }
+
+    .oxyn-editor textarea:focus {
+      outline: 1px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.8),
+                  0 0 12px rgba(76,175,80,0.55);
+    }
+
+    /* MODE KALI */
+
+    .kali-banner {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.6rem;
+      background: linear-gradient(90deg,#000,#041c14,#000);
+      border: 1px solid rgba(0,255,179,0.4);
+      margin-bottom: 0.4rem;
+    }
+
+    .kali-banner strong {
+      color: #00ffb3;
+    }
+
+    .kali-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .kali-controls input[type="number"] {
+      width: 4rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(0,0,0,0.6);
+      color: #f5f5f5;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.4rem;
+    }
+
+    .kali-exports {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .kali-report-box {
+      border-radius: 0.75rem;
+      border: 1px solid rgba(0,255,179,0.4);
+      background: radial-gradient(circle at top left, rgba(0,0,0,0.9), rgba(0,20,10,0.9));
+      padding: 0.4rem;
+      max-height: 16rem;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+    }
+
+    .kali-report-box pre {
+      white-space: pre-wrap;
+    }
+
+    .kali-status {
+      font-size: 0.72rem;
+      opacity: 0.78;
+      margin-bottom: 0.3rem;
+    }
+
+    /* ALERTE CYBER */
+
+    .cyber-report-box {
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,0,86,0.5);
+      background: radial-gradient(circle at top left, rgba(38,0,15,0.95), rgba(4,0,10,0.95));
+      padding: 0.4rem;
+      max-height: 12rem;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      margin-top: 0.4rem;
+    }
+
+    .cyber-report-box pre {
+      white-space: pre-wrap;
+    }
+
+    .cyber-grid {
+      display: grid;
+      grid-template-columns: minmax(0,1fr);
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+
+    @media (min-width: 700px) {
+      .cyber-grid {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+      }
+    }
+
+    .cyber-card {
+      border-radius: 0.8rem;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.6);
+      padding: 0.45rem 0.55rem;
+      font-size: 0.78rem;
+    }
+
+    .cyber-card-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      border-radius: 999px;
+      padding: 0.05rem 0.4rem;
+    }
+
+    .badge-high {
+      background: rgba(255,0,86,0.2);
+      border: 1px solid rgba(255,0,86,0.6);
+      color: #ff5c88;
+    }
+
+    .badge-medium {
+      background: rgba(255,171,0,0.2);
+      border: 1px solid rgba(255,171,0,0.6);
+      color: #ffcf5c;
+    }
+
+    .badge-low {
+      background: rgba(0,255,179,0.18);
+      border: 1px solid rgba(0,255,179,0.6);
+      color: #6bffd1;
+    }
+
+    .cyber-quiz {
+      margin-top: 0.6rem;
+      border-radius: 0.75rem;
+      border: 1px dashed rgba(255,255,255,0.25);
+      padding: 0.45rem 0.55rem;
+      font-size: 0.78rem;
+    }
+
+    .cyber-quiz-q {
+      margin-top: 0.35rem;
+    }
+
+    .cyber-quiz-q strong {
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .cyber-quiz-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-top: 0.15rem;
+    }
+
+    .cyber-quiz-feedback {
+      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      opacity: 0.85;
+    }
+
+    /* MARKDOWN APP */
+
+    .md-layout {
+      margin-top: 0.4rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+
+    @media (min-width: 800px) {
+      .md-layout {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .md-editor,
+    .md-preview {
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.6);
+      padding: 0.4rem;
+      min-height: 8rem;
+      max-height: 16rem;
+      overflow: auto;
+    }
+
+    .md-editor textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 8rem;
+      border: none;
+      background: transparent;
+      color: #f5f5f5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      resize: none;
+    }
+
+    .md-editor textarea:focus {
+      outline: none;
+    }
+
+    .md-preview-content {
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .md-preview-content h1,
+    .md-preview-content h2,
+    .md-preview-content h3 {
+      margin: 0.2rem 0;
+    }
+
+    .md-preview-content p {
+      margin: 0.2rem 0;
+    }
+
+    .md-preview-content code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      background: rgba(255,255,255,0.08);
+      padding: 0.05rem 0.25rem;
+      border-radius: 0.3rem;
+    }
+
+    .md-preview-content pre {
+      background: rgba(0,0,0,0.8);
+      padding: 0.3rem;
+      border-radius: 0.4rem;
+      overflow: auto;
+    }
+
+    /* NAVIGATEUR INTERNET */
+
+    .browser-toolbar {
+      margin-top: 0.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    .browser-toolbar button {
+      font-size: 0.78rem;
+    }
+
+    .browser-addr {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.6);
+      color: #f5f5f5;
+      font-size: 0.78rem;
+      padding: 0.2rem 0.6rem;
+    }
+
+    .browser-addr::placeholder {
+      color: rgba(255,255,255,0.4);
+    }
+
+    .browser-addr:focus {
+      outline: none;
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .browser-status {
+      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      opacity: 0.8;
+    }
+
+    .browser-frame-wrap {
+      margin-top: 0.4rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: #000;
+      overflow: hidden;
+    }
+
+    .browser-iframe {
+      border: none;
+      width: 100%;
+      height: 18rem;
+    }
+
+    @media (min-height: 700px) {
+      .browser-iframe {
+        height: 22rem;
+      }
+    }
+
+    /* TERMINAL */
+
+    /* MOBILE */
+
+    @media (max-width: 600px) {
+      #desktop {
+        padding-bottom: 0.3rem;
+        gap: 0.4rem;
+      }
+
+      .desktop-icon {
+        width: 3.4rem;
+      }
+
+      .window {
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw;
+        height: calc(100vh - 2.5rem);
+        max-height: calc(100vh - 2.5rem);
+        border-radius: 0;
+      }
+
+      .window-titlebar {
+        height: 2.4rem;
+        cursor: default;
+      }
+
+      .window-btn {
+        width: 1.6rem;
+        height: 1.6rem;
+      }
+
+      .window-content {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="desktop"></div>
+
+  <!-- Menu démarrer -->
+  <div id="startMenu" class="hidden">
+    <div class="start-title">Applications</div>
+    <div class="start-grid" id="startAppGrid"></div>
+    <div class="start-footer">
+      <span>NYXO • Session locale</span>
+      <span style="opacity:.5;">HTML/CSS/JS only</span>
+    </div>
+  </div>
+
+  <!-- Barre des tâches -->
+  <div id="taskbar">
+    <button id="startBtn">
+      <span class="logo">NY</span>
+      <span>Menu</span>
+    </button>
+    <div id="taskbar-windows"></div>
+    <div id="clock"></div>
+  </div>
+
+  <!-- Template fenêtre -->
+  <template id="windowTemplate">
+    <div class="window">
+      <div class="window-titlebar">
+        <div style="display:flex;gap:0.2rem;">
+          <div class="window-dot"></div>
+          <div class="window-dot"></div>
+          <div class="window-dot"></div>
+        </div>
+        <div class="window-title"></div>
+        <div class="window-buttons">
+          <button class="window-btn" data-action="minimize">▁</button>
+          <button class="window-btn" data-action="close">✕</button>
+        </div>
+      </div>
+      <div class="window-content"></div>
+    </div>
+  </template>
+
+  <script>
+    // === ÉTAT GLOBAL ========================================================
+    const FILE_REGISTRY = {};
+    let FILE_ID_COUNTER = 0;
+
+    const OXYN_STATE = {
+      file: null,
+      path: null,
+      text: null,
+      isText: false,
+      editMode: false
+    };
+
+    const OXYN_DOM = {
+      meta: null,
+      body: null,
+      scanBtn: null,
+      editBtn: null,
+      exportBtn: null,
+      fileInput: null,
+      saveDiskBtn: null
+    };
+
+    const STATE = {
+      windows: {},
+      zIndexCounter: 10
+    };
+
+    // DOM de base
+    const $desktop = document.getElementById("desktop");
+    const $startBtn = document.getElementById("startBtn");
+    const $startMenu = document.getElementById("startMenu");
+    const $startAppGrid = document.getElementById("startAppGrid");
+    const $taskWindows = document.getElementById("taskbar-windows");
+    const $clock = document.getElementById("clock");
+    const $windowTemplate = document.getElementById("windowTemplate");
+
+    // === UTILITAIRES FENÊTRES & OS =========================================
+
+    function bringToFront(win) {
+      STATE.zIndexCounter += 1;
+      win.style.zIndex = STATE.zIndexCounter;
+      const id = win.dataset.appId;
+      for (const btn of $taskWindows.querySelectorAll(".taskbar-item")) {
+        btn.classList.toggle("active", btn.dataset.appId === id);
+      }
+    }
+
+    function updateClock() {
+      const d = new Date();
+      const h = String(d.getHours()).padStart(2, "0");
+      const m = String(d.getMinutes()).padStart(2, "0");
+      $clock.textContent = `${h}:${m}`;
+    }
+
+    setInterval(updateClock, 10000);
+    updateClock();
+
+    function toggleStartMenu(forceHide = false) {
+      if (forceHide) {
+        $startMenu.classList.add("hidden");
+        return;
+      }
+      $startMenu.classList.toggle("hidden");
+    }
+
+    document.addEventListener("click", (e) => {
+      if (
+        !$startMenu.contains(e.target) &&
+        !$startBtn.contains(e.target)
+      ) {
+        $startMenu.classList.add("hidden");
+      }
+    });
+
+    $startBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleStartMenu();
+    });
+
+    function clampWindowToViewport(win) {
+      const rect = win.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const margin = 8;
+      const bottomLimit = vh - 40; // taskbar
+
+      let left = rect.left;
+      let top  = rect.top;
+
+      if (rect.right > vw - margin) left = vw - rect.width - margin;
+      if (rect.bottom > bottomLimit) top = bottomLimit - rect.height;
+
+      if (left < margin) left = margin;
+      if (top < margin) top = margin;
+
+      win.style.left = left + "px";
+      win.style.top  = top + "px";
+    }
+
+    window.addEventListener("resize", () => {
+      Object.values(STATE.windows).forEach(w => clampWindowToViewport(w.element));
+    });
+
+    function createWindow(appConfig) {
+      const existing = STATE.windows[appConfig.id];
+      if (existing) {
+        existing.element.style.display = "flex";
+        bringToFront(existing.element);
+        return existing.element;
+      }
+
+      const tpl = $windowTemplate.content.firstElementChild.cloneNode(true);
+      tpl.dataset.appId = appConfig.id;
+
+      const x = 40 + Math.random() * 80;
+      const y = 40 + Math.random() * 40;
+      tpl.style.left = x + "px";
+      tpl.style.top = y + "px";
+
+      const titleEl = tpl.querySelector(".window-title");
+      titleEl.textContent = appConfig.name;
+
+      const contentEl = tpl.querySelector(".window-content");
+      appConfig.open(contentEl);
+
+      tpl.querySelectorAll(".window-btn").forEach(btn => {
+        const action = btn.dataset.action;
+        btn.addEventListener("click", () => {
+          if (action === "close") {
+            closeWindow(appConfig.id);
+          } else if (action === "minimize") {
+            tpl.style.display = "none";
+          }
+        });
+      });
+
+      tpl.addEventListener("mousedown", () => bringToFront(tpl));
+
+      clampWindowToViewport(tpl);
+      makeWindowDraggable(tpl);
+
+      $desktop.appendChild(tpl);
+      bringToFront(tpl);
+
+      const tbBtn = document.createElement("button");
+      tbBtn.className = "taskbar-item active";
+      tbBtn.dataset.appId = appConfig.id;
+      tbBtn.innerHTML =
+        `<span class="icon">${appConfig.icon}</span><span>${appConfig.name}</span>`;
+      tbBtn.addEventListener("click", () => {
+        if (tpl.style.display === "none") {
+          tpl.style.display = "flex";
+          bringToFront(tpl);
+        } else {
+          tpl.style.display = "none";
+          tbBtn.classList.remove("active");
+        }
+      });
+      $taskWindows.appendChild(tbBtn);
+
+      STATE.windows[appConfig.id] = {
+        element: tpl,
+        taskButton: tbBtn,
+        config: appConfig
+      };
+
+      return tpl;
+    }
+
+    function closeWindow(appId) {
+      const win = STATE.windows[appId];
+      if (!win) return;
+      win.element.remove();
+      win.taskButton.remove();
+      delete STATE.windows[appId];
+    }
+
+    function makeWindowDraggable(win) {
+      if (window.innerWidth <= 600) return; // mobile : plein écran
+
+      const titlebar = win.querySelector(".window-titlebar");
+      let isDragging = false;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      titlebar.addEventListener("mousedown", (e) => {
+        if (e.target.closest(".window-buttons")) return;
+        isDragging = true;
+        bringToFront(win);
+        const rect = win.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        document.body.style.userSelect = "none";
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const x = e.clientX - offsetX;
+        const y = e.clientY - offsetY;
+        win.style.left = x + "px";
+        win.style.top = y + "px";
+      });
+
+      document.addEventListener("mouseup", () => {
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.style.userSelect = "";
+        clampWindowToViewport(win);
+      });
+    }
+
+    // === REGISTRE FICHIERS TEMPORAIRES =====================================
+
+    function registerFile(file) {
+      const id = "f" + Date.now() + "_" + Math.random().toString(16).slice(2);
+      FILE_REGISTRY[id] = file;
+      return id;
+    }
+
+    function FILE_REGISTRY_CLEAR() {
+      for (const key of Object.keys(FILE_REGISTRY)) {
+        delete FILE_REGISTRY[key];
+      }
+    }
+
+    function guessFileIcon(file) {
+      const name = file.name.toLowerCase();
+      const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
+      const type = file.type || "";
+
+      if (type.startsWith("image/") || ["png","jpg","jpeg","gif","webp","svg"].includes(ext)) return "🖼️";
+      if (type.startsWith("audio/") || ["mp3","wav","ogg"].includes(ext)) return "🎵";
+      if (type.startsWith("video/") || ["mp4","webm","ogv"].includes(ext)) return "🎬";
+      if (ext === "pdf") return "📄";
+      if (["txt","md"].includes(ext)) return "📜";
+      if (["csv","xls","xlsx"].includes(ext)) return "📊";
+      if (["html","css","js","json"].includes(ext)) return "🧩";
+      return "📁";
+    }
+
+    // === DISQUE NYXO PERSISTANT v2 =========================================
+    const DISK_KEY = "nyxo_disk_v2";
+
+    function getEmptyDisk() {
+      const now = new Date().toISOString();
+      return {
+        version: 2,
+        createdAt: now,
+        updatedAt: now,
+        files: {}
+      };
+    }
+
+    function loadDisk() {
+      try {
+        const raw = localStorage.getItem(DISK_KEY);
+        if (!raw) return getEmptyDisk();
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          return getEmptyDisk();
+        }
+        if (!parsed.files || typeof parsed.files !== "object") {
+          parsed.files = {};
+        }
+        return parsed;
+      } catch (e) {
+        console.warn("Erreur de lecture du disque NYXO :", e);
+        return getEmptyDisk();
+      }
+    }
+
+    function saveDisk(disk) {
+      try {
+        disk.updatedAt = new Date().toISOString();
+        localStorage.setItem(DISK_KEY, JSON.stringify(disk));
+      } catch (e) {
+        console.warn("Erreur de sauvegarde du disque NYXO :", e);
+        alert("Impossible de sauvegarder sur le disque NYXO (quota localStorage ?).");
+      }
+    }
+
+    function resetDisk() {
+      const empty = getEmptyDisk();
+      saveDisk(empty);
+      return empty;
+    }
+
+    function getDiskSummary() {
+      const disk = loadDisk();
+      const files = disk.files || {};
+      const count = Object.keys(files).length;
+      let totalChars = 0;
+      for (const f of Object.values(files)) {
+        totalChars += (f.content || "").length;
+      }
+      return { count, totalChars };
+    }
+
+    function listDiskFilesTree() {
+      const disk = loadDisk();
+      const files = disk.files || {};
+      const entries = Object.entries(files).map(([path, meta]) => {
+        const cleanPath = path.startsWith("/") ? path : "/" + path;
+        const parts = cleanPath.split("/").filter(Boolean);
+        const name = parts.length ? parts[parts.length - 1] : "/";
+        const depth = parts.length;
+
+        return {
+          path: cleanPath,
+          name,
+          depth,
+          mime: meta.mime || "text/plain",
+          size: (meta.content || "").length,
+          createdAt: meta.createdAt || disk.createdAt,
+          updatedAt: meta.updatedAt || disk.updatedAt
+        };
+      });
+
+      entries.sort((a, b) => a.path.localeCompare(b.path));
+      return entries;
+    }
+
+    function readDiskFile(path) {
+      const disk = loadDisk();
+      const cleanPath = path.startsWith("/") ? path : "/" + path;
+      return disk.files[cleanPath] || null;
+    }
+
+    function writeDiskFile(path, mime, content) {
+      const disk = loadDisk();
+      const cleanPath = path.startsWith("/") ? path : "/" + path;
+      const now = new Date().toISOString();
+      const prev = disk.files[cleanPath];
+
+      disk.files[cleanPath] = {
+        mime: mime || prev?.mime || "text/plain",
+        content: content || "",
+        createdAt: prev?.createdAt || now,
+        updatedAt: now
+      };
+
+      saveDisk(disk);
+    }
+
+    function deleteDiskFile(path) {
+      const disk = loadDisk();
+      const cleanPath = path.startsWith("/") ? path : "/" + path;
+      if (disk.files[cleanPath]) {
+        delete disk.files[cleanPath];
+        saveDisk(disk);
+        return true;
+      }
+      return false;
+    }
+
+    function renameDiskFile(oldPath, newPath) {
+      const disk = loadDisk();
+      const o = oldPath.startsWith("/") ? oldPath : "/" + oldPath;
+      const n = newPath.startsWith("/") ? newPath : "/" + newPath;
+
+      if (!disk.files[o]) return false;
+      if (disk.files[n]) return false;
+
+      disk.files[n] = { ...disk.files[o], updatedAt: new Date().toISOString() };
+      delete disk.files[o];
+      saveDisk(disk);
+      return true;
+    }
+
+    // === APPLI : À PROPOS ===================================================
+
+    function createAboutApp(container) {
+      container.innerHTML = `
+        <p><strong>NYXO</strong> est un mini système d’exploitation
+        100% HTML/CSS/JS qui tourne dans ton navigateur.</p>
+        <p style="margin-top:0.4rem;">
+          Tu peux ouvrir des fenêtres, les déplacer (sur ordinateur),
+          explorer des dossiers locaux, afficher des fichiers, prendre des notes,
+          analyser ta session avec le <strong>Mode Kali</strong>, jouer avec
+          <strong>Alerte Cyber</strong>, éditer du Markdown, et même surfer via le Navigateur.
+        </p>
+        <p style="margin-top:0.4rem;font-size:0.78rem;opacity:.8;">
+          NYXO ne voit que ce que ton navigateur expose : user-agent, langue,
+          résolution, stockage estimé... Pas d’IP, pas de scan réseau,
+          pas de serveur distant. Tout reste dans ton onglet.
+        </p>
+      `;
+    }
+
+    // === APPLI : BLOC-NOTES =================================================
+
+    const NOTES_KEY = "nyxo_notes";
+
+    function createNotesApp(container) {
+      const saved = localStorage.getItem(NOTES_KEY) || "";
+      container.innerHTML = `
+        <p><strong>Bloc-notes NYXO</strong></p>
+        <textarea class="notes-textarea" id="notesArea"
+          placeholder="Écris ici tout ce qui te passe par la tête...">${saved}</textarea>
+        <button class="btn-primary" id="saveNotesBtn">💾 Sauvegarder</button>
+        <div class="helper-text">
+          Les notes sont enregistrées dans <code>localStorage</code> sur ce navigateur.
+        </div>
+      `;
+
+      const textarea = container.querySelector("#notesArea");
+      const btn = container.querySelector("#saveNotesBtn");
+
+      function save() {
+        localStorage.setItem(NOTES_KEY, textarea.value);
+      }
+
+      btn.addEventListener("click", save);
+      textarea.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          save();
+        }
+      });
+
+      setTimeout(() => textarea.focus(), 0);
+    }
+
+    // === APPLI : OXYN – VISIONNEUSE / ÉDITEUR ==============================
+
+    function openFileInViewer(fileId, path) {
+      const file = FILE_REGISTRY[fileId];
+      if (!file) {
+        alert("Fichier introuvable.");
+        return;
+      }
+
+      const viewerApp = APPS.find(a => a.id === "viewer");
+      let viewerWin = STATE.windows["viewer"]?.element;
+      if (!viewerWin) {
+        viewerWin = createWindow(viewerApp);
+      } else {
+        viewerWin.style.display = "flex";
+        bringToFront(viewerWin);
+      }
+      const container = viewerWin.querySelector(".window-content");
+      renderFileInViewer(container, file, path);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function renderFileInViewer(container, file, path) {
+      const metaEl = container.querySelector("#oxynMeta");
+      const bodyEl = container.querySelector("#oxynBody");
+
+      if (!metaEl || !bodyEl) {
+        // fallback simple si jamais l'UI Oxyn n'est pas montée (dev)
+        const name = file.name.toLowerCase();
+        const type = file.type || "";
+        const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
+        const sizeKB = (file.size / 1024).toFixed(1);
+
+        const isImage = type.startsWith("image/") ||
+                        ["png","jpg","jpeg","gif","webp","svg"].includes(ext);
+        const isAudio = type.startsWith("audio/") ||
+                        ["mp3","wav","ogg"].includes(ext);
+        const isVideo = type.startsWith("video/") ||
+                        ["mp4","webm","ogv"].includes(ext);
+        const isPdf   = type === "application/pdf" || ext === "pdf";
+        const isText  =
+          type.startsWith("text/") ||
+          ["txt","md","json","csv","html","css","js"].includes(ext);
+
+        const baseHeader = `
+          <div class="viewer-header"><strong>${path}</strong></div>
+          <div class="viewer-meta">
+            Nom : ${file.name} · Taille : ${sizeKB} ko
+          </div>
+        `;
+
+        if (isImage) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-image-wrap">
+              <img src="${url}" alt="${file.name}">
+            </div>
+          `;
+          return;
+        }
+
+        if (isAudio) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box">
+              <audio controls style="width:100%;">
+                <source src="${url}">
+                Ton navigateur ne supporte pas l’élément audio.
+              </audio>
+            </div>
+          `;
+          return;
+        }
+
+        if (isVideo) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box">
+              <video controls style="width:100%;max-height:14rem;">
+                <source src="${url}">
+                Ton navigateur ne supporte pas l’élément vidéo.
+              </video>
+            </div>
+          `;
+          return;
+        }
+
+        if (isPdf) {
+          const url = URL.createObjectURL(file);
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box" style="padding:0;max-height:none;">
+              <embed src="${url}" type="application/pdf"
+                     style="width:100%;height:18rem;border-radius:0.75rem;">
+              </embed></div>
+            <div class="helper-text" style="margin-top:0.3rem;">
+              Si le PDF ne s’affiche pas, essaie un autre navigateur ou
+              télécharge le fichier depuis l’explorateur classique.
+            </div>
+          `;
+          return;
+        }
+
+        if (isText) {
+          container.innerHTML = baseHeader + `
+            <div class="viewer-box">
+              <pre id="viewerText"></pre>
+            </div>
+          `;
+          const pre = container.querySelector("#viewerText");
+          const reader = new FileReader();
+          reader.onload = () => {
+            pre.textContent = reader.result;
+          };
+          reader.onerror = () => {
+            pre.textContent = "[Erreur de lecture du fichier texte]";
+          };
+          reader.readAsText(file, "utf-8");
+          return;
+        }
+
+        container.innerHTML = baseHeader + `
+          <div class="viewer-box">
+            <p>Type non géré pour la prévisualisation.</p>
+            <p class="helper-text">
+              Extension : <code>.${ext || "?"}</code> — type MIME : <code>${type || "inconnu"}</code>.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      // === MODE OXYN COMPLET ===
+      const name = file.name.toLowerCase();
+      const type = file.type || "";
+      const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase();
+      const sizeKB = (file.size / 1024).toFixed(1);
+
+      const isImage = type.startsWith("image/") ||
+                      ["png","jpg","jpeg","gif","webp","svg"].includes(ext);
+      const isAudio = type.startsWith("audio/") ||
+                      ["mp3","wav","ogg"].includes(ext);
+      const isVideo = type.startsWith("video/") ||
+                      ["mp4","webm","ogv"].includes(ext);
+      const isPdf   = type === "application/pdf" || ext === "pdf";
+      const isText  =
+        type.startsWith("text/") ||
+        ["txt","md","json","csv","html","css","js"].includes(ext);
+
+      OXYN_STATE.file = file;
+      OXYN_STATE.path = path;
+      OXYN_STATE.isText = isText;
+      OXYN_STATE.editMode = false;
+      OXYN_STATE.text = null;
+
+      metaEl.textContent = `Fichier : ${path} · ${type || "type inconnu"} · ${sizeKB} ko`;
+
+      if (OXYN_DOM.scanBtn) OXYN_DOM.scanBtn.disabled = false;
+      if (OXYN_DOM.exportBtn) OXYN_DOM.exportBtn.disabled = false;
+      if (OXYN_DOM.editBtn) {
+        OXYN_DOM.editBtn.disabled = !isText;
+        OXYN_DOM.editBtn.textContent = "✏️ Éditer";
+      }
+      if (OXYN_DOM.saveDiskBtn) {
+        OXYN_DOM.saveDiskBtn.disabled = !isText;
+      }
+
+      if (isImage) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <div class="viewer-image-wrap">
+              <img src="${url}" alt="${file.name}">
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (isAudio) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <audio controls style="width:100%;">
+              <source src="${url}">
+              Ton navigateur ne supporte pas l’élément audio.
+            </audio>
+          </div>
+        `;
+        return;
+      }
+
+      if (isVideo) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <video controls style="width:100%;max-height:14rem;">
+              <source src="${url}">
+              Ton navigateur ne supporte pas l’élément vidéo.
+            </video>
+          </div>
+        `;
+        return;
+      }
+
+      if (isPdf) {
+        const url = URL.createObjectURL(file);
+        bodyEl.innerHTML = `
+          <div class="viewer-box" style="padding:0;max-height:none;">
+            <embed src="${url}" type="application/pdf"
+                   style="width:100%;height:18rem;border-radius:0.75rem;">
+            </embed></div>
+        `;
+        return;
+      }
+
+      if (isText) {
+        bodyEl.innerHTML = `
+          <div class="viewer-box">
+            <pre id="oxynTextView">Chargement du texte...</pre>
+          </div>
+        `;
+        const pre = bodyEl.querySelector("#oxynTextView");
+        const reader = new FileReader();
+        reader.onload = () => {
+          OXYN_STATE.text = reader.result;
+          if (pre) pre.textContent = OXYN_STATE.text;
+        };
+        reader.onerror = () => {
+          if (pre) pre.textContent = "[Erreur de lecture du fichier texte]";
+        };
+        reader.readAsText(file, "utf-8");
+        return;
+      }
+
+      bodyEl.innerHTML = `
+        <div class="viewer-box">
+          <p>Type non géré pour la prévisualisation.</p>
+          <p class="helper-text">
+            Extension : <code>.${ext || "?"}</code> — type MIME : <code>${type || "inconnu"}</code>.
+          </p>
+        </div>
+      `;
+    }
+
+    function createViewerApp(container) {
+      container.innerHTML = `
+        <p><strong>Oxyn – Visionneuse & éditeur</strong></p>
+        <p class="helper-text">
+          Ouvre un fichier via l’Explorateur ou importe un fichier local.
+          Pour les fichiers texte, tu peux éditer et exporter une copie
+          ou la sauvegarder sur le disque NYXO (DISK:/).
+        </p>
+
+        <div class="oxyn-toolbar">
+          <button class="btn-ghost" id="oxynImportBtn">📥 Importer un fichier</button>
+          <button class="btn-ghost" id="oxynScanBtn" disabled>🔎 Scanner</button>
+          <button class="btn-ghost" id="oxynEditBtn" disabled>✏️ Éditer</button>
+          <button class="btn-ghost" id="oxynExportBtn" disabled>💾 Exporter une copie</button>
+          <button class="btn-ghost" id="oxynSaveDiskBtn" disabled>💾 DISK:/</button>
+          <input type="file" id="oxynFileInput" style="display:none;">
+        </div>
+
+        <div class="oxyn-meta" id="oxynMeta">
+          Aucun fichier chargé pour l’instant.
+        </div>
+
+        <div class="oxyn-body" id="oxynBody">
+          <div class="viewer-box">
+            <p>En attente de fichier…</p>
+          </div>
+        </div>
+      `;
+
+      OXYN_DOM.meta = container.querySelector("#oxynMeta");
+      OXYN_DOM.body = container.querySelector("#oxynBody");
+      OXYN_DOM.scanBtn = container.querySelector("#oxynScanBtn");
+      OXYN_DOM.editBtn = container.querySelector("#oxynEditBtn");
+      OXYN_DOM.exportBtn = container.querySelector("#oxynExportBtn");
+      OXYN_DOM.fileInput = container.querySelector("#oxynFileInput");
+      OXYN_DOM.saveDiskBtn = container.querySelector("#oxynSaveDiskBtn");
+
+      const importBtn = container.querySelector("#oxynImportBtn");
+
+      importBtn.addEventListener("click", () => {
+        OXYN_DOM.fileInput.click();
+      });
+
+      OXYN_DOM.fileInput.addEventListener("change", () => {
+        const file = OXYN_DOM.fileInput.files?.[0];
+        if (!file) return;
+        renderFileInViewer(container, file, file.name);
+      });
+
+      // SCAN
+      OXYN_DOM.scanBtn.addEventListener("click", () => {
+        if (!OXYN_STATE.file) return;
+        const f = OXYN_STATE.file;
+        const sizeKB = (f.size / 1024).toFixed(1);
+        let extra = "";
+
+        if (OXYN_STATE.isText && OXYN_STATE.text != null) {
+          const text = OXYN_STATE.text;
+          const chars = text.length;
+          const lines = text.split(/\r\n|\r|\n/).length;
+          const words = (text.match(/\S+/g) || []).length;
+          extra = `<br><small>Texte : ${words} mot(s), ${lines} ligne(s), ${chars} caractère(s).</small>`;
+        }
+
+        OXYN_DOM.meta.innerHTML =
+          `Fichier : <strong>${OXYN_STATE.path}</strong> · ${(f.type || "type inconnu")} · ${sizeKB} ko${extra}`;
+      });
+
+      // EDITION
+      OXYN_DOM.editBtn.addEventListener("click", () => {
+        if (!OXYN_STATE.isText || OXYN_STATE.text == null) return;
+
+        if (!OXYN_STATE.editMode) {
+          OXYN_STATE.editMode = true;
+          OXYN_DOM.editBtn.textContent = "👁️ Mode lecture";
+
+          OXYN_DOM.body.innerHTML = `
+            <div class="viewer-box oxyn-editor">
+              <textarea id="oxynEditor"></textarea>
+            </div>
+          `;
+          const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+          ta.value = OXYN_STATE.text;
+          ta.focus();
+        } else {
+          const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+          if (ta) {
+            OXYN_STATE.text = ta.value;
+          }
+          OXYN_STATE.editMode = false;
+          OXYN_DOM.editBtn.textContent = "✏️ Éditer";
+
+          OXYN_DOM.body.innerHTML = `
+            <div class="viewer-box">
+              <pre>${escapeHtml(OXYN_STATE.text)}</pre>
+            </div>
+          `;
+        }
+      });
+
+      // EXPORT simple (copie)
+      OXYN_DOM.exportBtn.addEventListener("click", () => {
+        if (!OXYN_STATE.file) return;
+
+        if (OXYN_STATE.isText) {
+          let content = OXYN_STATE.text ?? "";
+          if (OXYN_STATE.editMode) {
+            const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+            if (ta) content = ta.value;
+          }
+          const defName = (OXYN_STATE.file.name || "copie.txt").replace(/(\.[^.]*)?$/, "-oxyn$1");
+          const filename = prompt("Nom du fichier à exporter :", defName) || defName;
+          triggerDownload(filename, "text/plain", content);
+        } else {
+          const defName = (OXYN_STATE.file.name || "fichier.bin").replace(/(\.[^.]*)?$/, "-oxyn$1");
+          const filename = prompt("Nom du fichier à exporter :", defName) || defName;
+          const blob = new Blob([OXYN_STATE.file], { type: OXYN_STATE.file.type || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      });
+
+      // Sauvegarder sur DISK:/ (texte uniquement)
+      if (OXYN_DOM.saveDiskBtn) {
+        OXYN_DOM.saveDiskBtn.addEventListener("click", () => {
+          if (!OXYN_STATE.isText) {
+            alert("Seuls les fichiers texte peuvent être sauvegardés sur DISK:/ pour le moment.");
+            return;
+          }
+
+          let content = OXYN_STATE.text ?? "";
+          if (OXYN_STATE.editMode) {
+            const ta = OXYN_DOM.body.querySelector("#oxynEditor");
+            if (ta) content = ta.value;
+          }
+
+          if (!content) {
+            const ok = confirm("Le contenu est vide. Sauvegarder quand même sur DISK:/ ?");
+            if (!ok) return;
+          }
+
+          let defaultPath = "/oxyn/" + (OXYN_STATE.file?.name || "fichier.txt");
+
+          if (typeof OXYN_STATE.path === "string" && OXYN_STATE.path.startsWith("DISK:")) {
+            defaultPath = OXYN_STATE.path.replace(/^DISK:/, "");
+            if (!defaultPath.startsWith("/")) defaultPath = "/" + defaultPath;
+          }
+
+          const path = prompt('Chemin sur DISK:/ (ex: /docs/notes.md)', defaultPath) || defaultPath;
+          if (!path.startsWith("/")) {
+            alert('Le chemin doit commencer par "/" (ex: /docs/notes.md).');
+            return;
+          }
+
+          const mime = OXYN_STATE.file?.type || "text/plain";
+          writeDiskFile(path, mime, content);
+          OXYN_STATE.path = "DISK:" + path;
+          alert("Fichier sauvegardé sur DISK:" + path);
+
+          const explorerWin = STATE.windows["explorer"]?.element;
+          if (explorerWin) {
+            const expContent = explorerWin.querySelector(".window-content");
+            if (expContent) {
+              createExplorerApp(expContent);
+            }
+          }
+        });
+      }
+    }
+
+    // === APPLI : EXPLORATEUR (DISK:/ + EXTERNAL:/) =========================
+
+    function createExplorerApp(container) {
+      container.innerHTML = `
+        <p><strong>Explorateur de fichiers</strong></p>
+        <div class="helper-text">
+          • <strong>DISK:/</strong> = faux disque dur persistant de NYXO (stocké dans localStorage)<br>
+          • <strong>EXTERNAL:/</strong> = dossiers/fichiers montés depuis ton vrai disque (non persistants ici).
+        </div>
+
+        <div class="file-toolbar" style="margin-top:0.45rem;">
+          <button class="btn-ghost" id="pickDirBtn">📂 Monter un dossier (EXTERNAL:/)</button>
+          <span id="explorerSummary" style="font-size:0.75rem;opacity:.75;"></span>
+        </div>
+
+        <input type="file" id="dirInput" style="display:none;" webkitdirectory multiple>
+
+        <p style="margin-top:0.4rem;font-size:0.78rem;opacity:0.85;">DISK:/ (disque NYXO persistant)</p>
+        <div class="file-toolbar" style="margin:0.2rem 0 0.3rem 0;">
+          <button class="btn-ghost" id="diskNewBtn">➕ Nouveau fichier</button>
+          <button class="btn-ghost" id="diskRenameBtn">✏️ Renommer</button>
+          <button class="btn-ghost" id="diskDeleteBtn">🗑️ Supprimer</button>
+          <button class="btn-ghost" id="diskResetBtn">⚠️ Réinitialiser DISK:/</button>
+        </div>
+        <ul class="file-list" id="diskList"></ul>
+
+        <p style="margin-top:0.4rem;font-size:0.78rem;opacity:0.85;">EXTERNAL:/ (dossiers montés pour cette session)</p>
+        <ul class="file-list" id="fileList"></ul>
+        <div class="file-empty" id="fileEmpty">
+          Aucun fichier externe chargé pour l’instant. Clique sur « Monter un dossier ».
+        </div>
+      `;
+
+      const pickBtn = container.querySelector("#pickDirBtn");
+      const input = container.querySelector("#dirInput");
+      const externalList = container.querySelector("#fileList");
+      const diskList = container.querySelector("#diskList");
+      const empty = container.querySelector("#fileEmpty");
+      const summary = container.querySelector("#explorerSummary");
+
+      const diskNewBtn = container.querySelector("#diskNewBtn");
+      const diskRenameBtn = container.querySelector("#diskRenameBtn");
+      const diskDeleteBtn = container.querySelector("#diskDeleteBtn");
+      const diskResetBtn = container.querySelector("#diskResetBtn");
+
+      let selectedDiskPath = null;
+
+      function renderDisk() {
+        const entries = listDiskFilesTree();
+        const sum = getDiskSummary();
+        diskList.innerHTML = "";
+
+        if (!entries.length) {
+          const li = document.createElement("li");
+          li.className = "file-item";
+          li.innerHTML = `<div style="font-size:0.78rem;opacity:0.7;">(DISK:/ est vide)</div>`;
+          diskList.appendChild(li);
+        } else {
+          entries.forEach(f => {
+            const li = document.createElement("li");
+            li.className = "file-item";
+            li.dataset.diskPath = f.path;
+
+            const indent = f.depth * 0.7;
+            li.innerHTML = `
+              <span class="icon">💾</span>
+              <div style="flex:1;">
+                <div style="padding-left:${indent}rem;">DISK:${f.path}</div>
+                <div class="file-meta">
+                  ${f.mime} · ${f.size} caractère(s)
+                </div>
+              </div>
+            `;
+
+            li.addEventListener("click", () => {
+              selectedDiskPath = f.path;
+              diskList.querySelectorAll(".file-item").forEach(item => item.classList.remove("active"));
+              li.classList.add("active");
+            });
+
+            li.addEventListener("dblclick", () => {
+              const diskFile = readDiskFile(f.path);
+              if (!diskFile) return;
+              const blob = new Blob([diskFile.content], { type: diskFile.mime || "text/plain" });
+              const fakeName = f.path.split("/").pop() || "fichier.txt";
+              const fakeFile = new File([blob], fakeName, { type: diskFile.mime || "text/plain" });
+              openFileInViewer(registerFile(fakeFile), "DISK:" + f.path);
+            });
+
+            diskList.appendChild(li);
+          });
+        }
+
+        const approxBytes = sum.totalChars;
+        const approxKB = (approxBytes / 1024).toFixed(1);
+        summary.textContent = `DISK:/ ${sum.count} fichier(s) – ~${approxKB} ko utilisés`;
+      }
+
+      renderDisk();
+
+      diskNewBtn.addEventListener("click", () => {
+        const path = prompt('Chemin du nouveau fichier (ex: /notes/nouveau.txt)', '/notes/nouveau.txt');
+        if (!path) return;
+        if (!path.startsWith("/")) {
+          alert('Le chemin doit commencer par "/"');
+          return;
+        }
+        const existing = readDiskFile(path);
+        if (existing) {
+          const ok = confirm("Un fichier existe déjà à ce chemin. L’écraser ?");
+          if (!ok) return;
+        }
+        writeDiskFile(path, "text/plain", "");
+        renderDisk();
+      });
+
+      diskRenameBtn.addEventListener("click", () => {
+        if (!selectedDiskPath) {
+          alert("Sélectionne d’abord un fichier dans DISK:/");
+          return;
+        }
+        const newPath = prompt("Nouveau chemin pour ce fichier :", selectedDiskPath);
+        if (!newPath || newPath === selectedDiskPath) return;
+        const ok = renameDiskFile(selectedDiskPath, newPath);
+        if (!ok) {
+          alert("Renommage impossible (fichier introuvable ou chemin déjà utilisé).");
+          return;
+        }
+        selectedDiskPath = newPath;
+        renderDisk();
+      });
+
+      diskDeleteBtn.addEventListener("click", () => {
+        if (!selectedDiskPath) {
+          alert("Sélectionne d’abord un fichier dans DISK:/");
+          return;
+        }
+        const ok = confirm("Supprimer définitivement DISK:" + selectedDiskPath + " ?");
+        if (!ok) return;
+        deleteDiskFile(selectedDiskPath);
+        selectedDiskPath = null;
+        renderDisk();
+      });
+
+      diskResetBtn.addEventListener("click", () => {
+        const ok = confirm("Réinitialiser complètement DISK:/ (tous les fichiers seront perdus) ?");
+        if (!ok) return;
+        resetDisk();
+        selectedDiskPath = null;
+        renderDisk();
+      });
+
+      // EXTERNAL
+      pickBtn.addEventListener("click", () => {
+        input.click();
+      });
+
+      input.addEventListener("change", () => {
+        const files = Array.from(input.files || []);
+        FILE_ID_COUNTER++;
+        const sessionId = FILE_ID_COUNTER;
+
+        externalList.innerHTML = "";
+        FILE_REGISTRY_CLEAR();
+
+        if (!files.length) {
+          empty.style.display = "block";
+          return;
+        }
+
+        files.sort((a, b) => {
+          const pa = a.webkitRelativePath || a.name;
+          const pb = b.webkitRelativePath || b.name;
+          return pa.localeCompare(pb);
+        });
+
+        files.forEach(file => {
+          const path = file.webkitRelativePath || file.name;
+          const depth = (path.split("/").length - 1);
+          const fileId = registerFile(file);
+
+          const li = document.createElement("li");
+          li.className = "file-item";
+          li.dataset.fileId = fileId;
+          li.title = path;
+
+          const icon = guessFileIcon(file);
+
+          li.innerHTML = `
+            <span class="icon">${icon}</span>
+            <div style="flex:1;">
+              <div style="padding-left:${depth * 0.7}rem;">EXTERNAL:/${path}</div>
+              <div class="file-meta">${(file.size/1024).toFixed(1)} ko</div>
+            </div>
+          `;
+
+          li.addEventListener("click", () => openFileInViewer(fileId, "EXTERNAL:/" + path));
+          externalList.appendChild(li);
+        });
+
+        empty.style.display = "none";
+        const sum = getDiskSummary();
+        const approxBytes = sum.totalChars;
+        const approxKB = (approxBytes / 1024).toFixed(1);
+        summary.textContent =
+          `DISK:/ ${sum.count} fichier(s) – ~${approxKB} ko · EXTERNAL:/ ${files.length} fichier(s) montés (session #${sessionId})`;
+      });
+    }
+
+    // === MODE KALI : RAPPORT TECHNIQUE =====================================
+
+    function generateSessionReportBase() {
+      const nav = navigator || {};
+      const screenObj = window.screen || {};
+      const dtOptions = Intl.DateTimeFormat().resolvedOptions?.() || {};
+
+      const report = {
+        generatedAt: new Date().toISOString(),
+        localeTime: new Date().toString(),
+        timeZone: dtOptions.timeZone || null,
+        languages: {
+          primary: nav.language || null,
+          all: nav.languages || null
+        },
+        userAgent: nav.userAgent || null,
+        platform: nav.platform || null,
+        hardware: {
+          cores: nav.hardwareConcurrency ?? null,
+          deviceMemoryGB: nav.deviceMemory ?? null
+        },
+        screen: {
+          width: screenObj.width,
+          height: screenObj.height,
+          availWidth: screenObj.availWidth,
+          availHeight: screenObj.availHeight,
+          pixelRatio: window.devicePixelRatio
+        },
+        onlineStatus: {
+          online: nav.onLine,
+          cookiesEnabled: nav.cookieEnabled
+        },
+        storageEstimate: null,
+        locationHint: {
+          timezone: dtOptions.timeZone || null,
+          language: nav.language || null
+        }
+      };
+
+      return report;
+    }
+
+    function enrichReportWithStorage(report, cb) {
+      if (navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(est => {
+          report.storageEstimate = {
+            quota: est.quota ?? null,
+            usage: est.usage ?? null
+          };
+          cb(report);
+        }).catch(() => cb(report));
+      } else {
+        cb(report);
+      }
+    }
+
+    function formatReportHuman(report) {
+      const lines = [];
+      lines.push(`# Session NYXO`);
+      lines.push(`Horodatage      : ${report.generatedAt}`);
+      lines.push(`Heure locale    : ${report.localeTime}`);
+      lines.push(`Fuseau horaire  : ${report.timeZone || "?"}`);
+      lines.push("");
+      lines.push(`## Navigateur`);
+      lines.push(`User-Agent      : ${report.userAgent || "?"}`);
+      lines.push(`Plateforme      : ${report.platform || "?"}`);
+      lines.push(`Langue principale : ${report.languages.primary || "?"}`);
+      lines.push(`Langues         : ${(report.languages.all || []).join(", ") || "?"}`);
+      lines.push("");
+      lines.push(`## Matériel (exposé par le navigateur)`);
+      lines.push(`Cœurs logiques  : ${report.hardware.cores ?? "?"}`);
+      lines.push(`Mémoire (deviceMemory) : ${report.hardware.deviceMemoryGB ?? "?"} GiB (approx)`);
+      lines.push("");
+      lines.push(`## Écran`);
+      lines.push(`Résolution      : ${report.screen.width} x ${report.screen.height}`);
+      lines.push(`Zone dispo      : ${report.screen.availWidth} x ${report.screen.availHeight}`);
+      lines.push(`Pixel ratio     : ${report.screen.pixelRatio}`);
+      lines.push("");
+      lines.push(`## Statut & stockage`);
+      lines.push(`En ligne        : ${report.onlineStatus.online ? "oui" : "non"}`);
+      lines.push(`Cookies activés : ${report.onlineStatus.cookiesEnabled ? "oui" : "non"}`);
+      if (report.storageEstimate) {
+        const { quota, usage } = report.storageEstimate;
+        const qMB = quota ? (quota / (1024*1024)).toFixed(1) : "?";
+        const uMB = usage ? (usage / (1024*1024)).toFixed(1) : "?";
+        lines.push(`Stockage estimé : ${uMB}/${qMB} Mo utilisés`);
+      } else {
+        lines.push(`Stockage estimé : non disponible`);
+      }
+      lines.push("");
+      lines.push(`## Indices de localisation (via navigateur)`);
+      lines.push(`Fuseau          : ${report.locationHint.timezone || "?"}`);
+      lines.push(`Langue          : ${report.locationHint.language || "?"}`);
+      lines.push("");
+      lines.push(`(Aucune IP ni géolocalisation réseau n’est accessible depuis NYXO.)`);
+      return lines.join("\n");
+    }
+
+    function formatReportJSON(report) {
+      return JSON.stringify(report, null, 2);
+    }
+
+    function formatReportMD(report) {
+      const human = formatReportHuman(report);
+      return human.replace(/^# /, "# Rapport Kali NYXO\n\n");
+    }
+
+    function formatReportTXT(report) {
+      return formatReportHuman(report)
+        .replace(/^#.*$/m, "=== Rapport de session NYXO ===")
+        .replace(/^## .+$/gm, "");
+    }
+
+    function formatReportCSV(report) {
+      const flat = {};
+      function add(prefix, obj) {
+        Object.entries(obj).forEach(([k,v]) => {
+          if (v && typeof v === "object" && !Array.isArray(v)) {
+            add(prefix ? `${prefix}.${k}` : k, v);
+          } else {
+            flat[prefix ? `${prefix}.${k}` : k] = Array.isArray(v) ? v.join("|") : v;
+          }
+        });
+      }
+      add("", report);
+      const rows = [["key","value"]];
+      Object.entries(flat).forEach(([k,v]) => {
+        const val = String(v ?? "");
+        rows.push([k, val.replace(/"/g,'""')]);
+      });
+      return rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    }
+
+    function formatReportHTML(report) {
+      const flat = {};
+      function add(prefix, obj) {
+        Object.entries(obj).forEach(([k,v]) => {
+          if (v && typeof v === "object" && !Array.isArray(v)) {
+            add(prefix ? `${prefix}.${k}` : k, v);
+          } else {
+            flat[prefix ? `${prefix}.${k}` : k] = Array.isArray(v) ? v.join(", ") : v;
+          }
+        });
+      }
+      add("", report);
+      const rows = Object.entries(flat).map(
+        ([k,v]) => `<tr><td>${k}</td><td>${String(v ?? "")}</td></tr>`
+      ).join("");
+      return `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Rapport NYXO</title></head>
+<body>
+<h1>Rapport de session NYXO (Mode Kali)</h1>
+<p>Généré le ${report.generatedAt}</p>
+<table border="1" cellspacing="0" cellpadding="4">
+<thead><tr><th>Clé</th><th>Valeur</th></tr></thead>
+<tbody>
+${rows}
+</tbody>
+</table>
+</body>
+</html>`;
+    }
+
+    function triggerDownload(filename, mime, content) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function createKaliApp(container) {
+      container.innerHTML = `
+        <div class="kali-banner">
+          <strong>Mode Kali NYXO :</strong> vue technique de ta session telle que le navigateur la voit.
+          Analyse locale uniquement, aucun envoi vers un serveur.
+        </div>
+        <div class="kali-controls">
+          <button class="btn-ghost" id="kaliRefresh">🔍 Scanner maintenant</button>
+          <span style="font-size:0.75rem;">Intervalle auto (min) :</span>
+          <input type="number" id="kaliInterval" min="1" value="5">
+          <button class="btn-ghost" id="kaliStartAuto">▶️ Auto</button>
+          <button class="btn-ghost" id="kaliStopAuto">⏹️ Stop</button>
+        </div>
+        <div class="kali-status" id="kaliStatus">
+          Aucun scan effectué pour l’instant.
+        </div>
+        <div class="kali-exports">
+          <button class="btn-ghost" data-format="json">💾 JSON</button>
+          <button class="btn-ghost" data-format="txt">💾 TXT</button>
+          <button class="btn-ghost" data-format="md">💾 Markdown</button>
+          <button class="btn-ghost" data-format="csv">💾 CSV</button>
+          <button class="btn-ghost" data-format="html">💾 HTML</button>
+        </div>
+        <div class="kali-report-box">
+          <pre id="kaliReportBox">En attente de rapport. Clique sur « Scanner maintenant ».</pre>
+        </div>
+        <div class="helper-text" style="margin-top:0.35rem;">
+          Limites : pas d’accès aux processus, pas de scan réseau, pas de vrai root.
+          C’est une vue « navigateur » de ton environnement.
+        </div>
+      `;
+
+      const reportBox = container.querySelector("#kaliReportBox");
+      const statusEl = container.querySelector("#kaliStatus");
+      const btnRefresh = container.querySelector("#kaliRefresh");
+      const intervalInput = container.querySelector("#kaliInterval");
+      const btnAuto = container.querySelector("#kaliStartAuto");
+      const btnStop = container.querySelector("#kaliStopAuto");
+      const exportButtons = container.querySelectorAll(".kali-exports button");
+
+      let currentReport = null;
+      let autoTimer = null;
+      let autoCount = 0;
+
+      function updateStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function render(report) {
+        currentReport = report;
+        const human = formatReportHuman(report);
+        reportBox.textContent = human;
+        updateStatus(`Dernier scan : ${new Date().toLocaleTimeString()} – Auto : ${autoTimer ? "ON" : "OFF"} – #${autoCount}`);
+      }
+
+      function doScan() {
+        const base = generateSessionReportBase();
+        enrichReportWithStorage(base, render);
+      }
+
+      btnRefresh.addEventListener("click", () => {
+        autoCount++;
+        doScan();
+      });
+
+      btnAuto.addEventListener("click", () => {
+        const mins = parseFloat(intervalInput.value || "0");
+        if (!mins || mins <= 0) {
+          alert("Intervalle invalide (en minutes).");
+          return;
+        }
+        if (autoTimer) clearInterval(autoTimer);
+        const ms = mins * 60 * 1000;
+        autoCount = 0;
+        doScan();
+        autoTimer = setInterval(() => {
+          autoCount++;
+          doScan();
+        }, ms);
+        updateStatus(`Auto-scan actif toutes les ${mins} minute(s).`);
+      });
+
+      btnStop.addEventListener("click", () => {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+          updateStatus("Auto-scan arrêté.");
+        }
+      });
+
+      exportButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!currentReport) {
+            alert("Aucun rapport à exporter. Fais un scan d’abord.");
+            return;
+          }
+          const fmt = btn.dataset.format;
+          let content, mime, ext;
+          if (fmt === "json") {
+            content = formatReportJSON(currentReport);
+            mime = "application/json";
+            ext = "json";
+          } else if (fmt === "txt") {
+            content = formatReportTXT(currentReport);
+            mime = "text/plain";
+            ext = "txt";
+          } else if (fmt === "md") {
+            content = formatReportMD(currentReport);
+            mime = "text/markdown";
+            ext = "md";
+          } else if (fmt === "csv") {
+            content = formatReportCSV(currentReport);
+            mime = "text/csv";
+            ext = "csv";
+          } else { // html
+            content = formatReportHTML(currentReport);
+            mime = "text/html";
+            ext = "html";
+          }
+          const filename = `nyxo-kali-report.${ext}`;
+          triggerDownload(filename, mime, content);
+        });
+      });
+
+      doScan();
+    }
+
+    // === APPLI : ALERTE CYBER ===============================================
+
+    function createCyberApp(container) {
+      container.innerHTML = `
+        <div class="kali-banner">
+          <strong>Alerte Cyber :</strong> simulateur de « choc pédagogique ».
+          Ce que n'importe quel site peut déduire de ta configuration, en local.
+        </div>
+        <div class="kali-controls">
+          <button class="btn-ghost" id="cyberScan">⚡ Scanner les risques</button>
+          <button class="btn-ghost" id="cyberOpenKali">🐉 Vue technique (Mode Kali)</button>
+        </div>
+        <div class="cyber-report-box">
+          <pre id="cyberReportText">En attente de scan. Clique sur « Scanner les risques » pour voir ton profil exploitable.</pre>
+        </div>
+
+        <div class="cyber-grid">
+          <div class="cyber-card">
+            <div class="cyber-card-title">
+              <span>Suivi publicitaire & profilage</span>
+              <span class="badge badge-high">Risque élevé</span>
+            </div>
+            <div>
+              Langue, fuseau horaire, résolution d’écran, puissance de la machine…
+              croisés avec ton historique, ça suffit à te suivre presque partout
+              sans cookies visibles.
+            </div>
+          </div>
+
+          <div class="cyber-card">
+            <div class="cyber-card-title">
+              <span>Empreinte numérique unique</span>
+              <span class="badge badge-medium">Risque moyen</span>
+            </div>
+            <div>
+              Plus ta config est « rare » (résolution, OS, extensions…), plus tu es identifiable
+              comme une empreinte digitale. Changer de VPN ne suffit pas toujours.
+            </div>
+          </div>
+
+          <div class="cyber-card">
+            <div class="cyber-card-title">
+              <span>Phishing ciblé</span>
+              <span class="badge badge-high">Risque élevé</span>
+            </div>
+            <div>
+              Connaître ton système, ta langue et ton fuseau permet d’envoyer un faux mail
+              parfaitement crédible (« ta banque », « ton administration locale », etc.).
+            </div>
+          </div>
+
+          <div class="cyber-card">
+            <div class="cyber-card-title">
+              <span>Fatigue sécuritaire</span>
+              <span class="badge badge-low">Risque sous-estimé</span>
+            </div>
+            <div>
+              Quand tu es fatigué, pressé ou en stress, tu valides plus facilement une fenêtre
+              ou un lien douteux. Le vrai danger, c’est souvent l’état dans lequel tu surfes.
+            </div>
+          </div>
+        </div>
+
+        <div class="cyber-quiz">
+          <div><strong>Mini quiz de survie cyber :</strong></div>
+
+          <div class="cyber-quiz-q" data-quiz="q1">
+            <strong>1. Tu reçois un mail ultra crédible qui te presse de cliquer sur un lien :</strong>
+            <div class="cyber-quiz-buttons">
+              <button class="btn-ghost" data-quiz-answer="q1-wrong1">Je clique, je verrai bien.</button>
+              <button class="btn-ghost" data-quiz-answer="q1-right">Je vérifie l’expéditeur, l’URL et je passe par le site officiel.</button>
+              <button class="btn-ghost" data-quiz-answer="q1-wrong2">Je transfère à tous mes contacts pour les « prévenir ».</button>
+            </div>
+            <div class="cyber-quiz-feedback" id="q1-feedback"></div>
+          </div>
+
+          <div class="cyber-quiz-q" data-quiz="q2">
+            <strong>2. Tu utilises le même mot de passe partout, mais « très compliqué » :</strong>
+            <div class="cyber-quiz-buttons">
+              <button class="btn-ghost" data-quiz-answer="q2-wrong1">C’est bon, personne ne le devinera.</button>
+              <button class="btn-ghost" data-quiz-answer="q2-right">Mauvaise idée : une fuite = tous tes comptes exposés, il faut un gestionnaire.</button>
+              <button class="btn-ghost" data-quiz-answer="q2-wrong2">Je le donne à mes amis, ils surveilleront pour moi.</button>
+            </div>
+            <div class="cyber-quiz-feedback" id="q2-feedback"></div>
+          </div>
+
+          <div class="cyber-quiz-q" data-quiz="q3">
+            <strong>3. Tu te connectes sur un Wi-Fi public inconnu :</strong>
+            <div class="cyber-quiz-buttons">
+              <button class="btn-ghost" data-quiz-answer="q3-wrong1">Je fais tout : banque, mails, administration, sans réfléchir.</button>
+              <button class="btn-ghost" data-quiz-answer="q3-right">Je limite aux usages non sensibles, idéalement derrière un VPN, et je coupe ensuite.</button>
+              <button class="btn-ghost" data-quiz-answer="q3-wrong2">Je partage le mot de passe sur les réseaux pour « rendre service ».</button>
+            </div>
+            <div class="cyber-quiz-feedback" id="q3-feedback"></div>
+          </div>
+        </div>
+      `;
+
+      const reportEl = container.querySelector("#cyberReportText");
+      const btnScan = container.querySelector("#cyberScan");
+      const btnKali = container.querySelector("#cyberOpenKali");
+
+      function buildFearReport(report) {
+        const ua = report.userAgent || "?";
+        const lang = report.languages.primary || "?";
+        const tz = report.timeZone || report.locationHint.timezone || "?";
+        const cores = report.hardware.cores ?? "?";
+        const mem  = report.hardware.deviceMemoryGB ?? "?";
+        const sw = report.screen.width;
+        const sh = report.screen.height;
+        const ratio = report.screen.pixelRatio;
+
+        const lines = [];
+        lines.push(`Profil session – exploitable par n’importe quel site :`);
+        lines.push("");
+        lines.push(`• Navigateur : ${ua}`);
+        lines.push(`• Langue & zone : ${lang} · ${tz}`);
+        lines.push(`• Matériel exposé : ${cores} cœurs logiques · ~${mem} GiB (approx)`);
+        lines.push(`• Écran : ${sw}×${sh} @ ratio ${ratio}`);
+        lines.push("");
+        lines.push(`Ce que ça permet en pratique :`);
+        lines.push(`– Te reconnaître d’un site à l’autre même sans cookies visibles.`);
+        lines.push(`– Adapter les attaques (phishing, arnaques) à ta langue et ton contexte.`);
+        lines.push(`– Déduire si ta machine est « faible » ou « puissante » (jeu en ligne, crypto, etc.).`);
+        lines.push("");
+        lines.push(`Bonne nouvelle : tu peux réduire l’empreinte en durcissant ton navigateur,`);
+        lines.push(`en limitant les scripts et en séparant tes usages (profil boulot / perso / navigation sale).`);
+
+        return lines.join("\n");
+      }
+
+      function scan() {
+        const base = generateSessionReportBase();
+        enrichReportWithStorage(base, (report) => {
+          reportEl.textContent = buildFearReport(report);
+        });
+      }
+
+      btnScan.addEventListener("click", scan);
+
+      btnKali.addEventListener("click", () => {
+        const kaliApp = APPS.find(a => a.id === "kali");
+        if (kaliApp) {
+          createWindow(kaliApp);
+        }
+      });
+
+      container.querySelectorAll("[data-quiz-answer]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.quizAnswer;
+          const qId = key.split("-")[0];
+          const feedback = container.querySelector(`#${qId}-feedback`);
+          if (!feedback) return;
+
+          if (key.endsWith("right")) {
+            feedback.textContent = "✔️ Réflexe sain : c’est ça qui casse le scénario catastrophe.";
+          } else {
+            feedback.textContent = "⚠️ C’est exactement le genre de comportement qui rend les attaques faciles.";
+          }
+        });
+      });
+    }
+
+    // === PARAMÈTRES / WALLPAPER ============================================
+
+    const WALLPAPER_KEY = "nyxo_wallpaper";
+
+    const wallpapers = [
+      {
+        id: "dark-neon",
+        label: "Neon",
+        css: "radial-gradient(circle at top left, #202840, #050813)"
+      },
+      {
+        id: "sunset",
+        label: "Sunset",
+        css: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 30%, #2d1b4c 100%)"
+      },
+      {
+        id: "matrix",
+        label: "Matrix",
+        css: "repeating-linear-gradient(180deg,#000 0,#020817 10px,#001b14 20px)"
+      },
+      {
+        id: "paper",
+        label: "Papier",
+        css: "radial-gradient(circle,#fafafa,#d0d0d0)"
+      }
+    ];
+
+    function applyWallpaper(id) {
+      const wp = wallpapers.find(w => w.id === id) || wallpapers[0];
+      document.documentElement.style.setProperty("--bg-desktop", wp.css);
+      localStorage.setItem(WALLPAPER_KEY, wp.id);
+    }
+
+    function createSettingsApp(container) {
+      const swatches = wallpapers.map(w => `
+        <div class="settings-swatch" data-wp="${w.id}">
+          <span>${w.label}</span>
+        </div>
+      `).join("");
+
+      container.innerHTML = `
+        <p><strong>Paramètres</strong></p>
+        <p class="helper-text">
+          Change le fond d’écran et joue avec l’ambiance de NYXO.
+        </p>
+        <div class="settings-grid">
+          ${swatches}
+        </div>
+      `;
+
+      container.querySelectorAll(".settings-swatch").forEach(div => {
+        const id = div.dataset.wp;
+        const wp = wallpapers.find(w => w.id === id);
+        if (wp) {
+          div.style.background = wp.css;
+        }
+        div.addEventListener("click", () => applyWallpaper(id));
+      });
+    }
+
+    // === APPLI : TERMINAL ===================================================
+
+    function createTerminalApp(container) {
+      container.innerHTML = `
+        <p><strong>Console NYXO (jouet)</strong></p>
+        <p class="helper-text">
+          Tape quelques commandes simples : <code>help</code>, <code>whoami</code>, <code>time</code>, <code>clear</code>.
+        </p>
+        <div id="terminalOutput" style="
+          margin-top:0.4rem;
+          border-radius:0.75rem;
+          border:1px solid rgba(255,255,255,0.2);
+          background:rgba(0,0,0,0.7);
+          padding:0.4rem;
+          font-family: monospace;
+          font-size:0.78rem;
+          min-height:5rem;
+          max-height:10rem;
+          overflow:auto;
+        "></div>
+        <div style="display:flex;gap:0.35rem;margin-top:0.35rem;">
+          <span style="font-family:monospace;font-size:0.8rem;opacity:.8;">$</span>
+          <input id="terminalInput" type="text" style="
+            flex:1;
+            border-radius:999px;
+            border:1px solid rgba(255,255,255,0.2);
+            background:rgba(0,0,0,0.6);
+            padding:0.2rem 0.5rem;
+            color:#f5f5f5;
+            font-family:monospace;
+            font-size:0.78rem;
+          " placeholder="help">
+        </div>
+      `;
+
+      const out = container.querySelector("#terminalOutput");
+      const input = container.querySelector("#terminalInput");
+
+      function println(text = "") {
+        const line = document.createElement("div");
+        line.textContent = text;
+        out.appendChild(line);
+        out.scrollTop = out.scrollHeight;
+      }
+
+      println("NYXO shell v0.1");
+      println("Tape `help` pour commencer.");
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const cmd = input.value.trim();
+          println(`$ ${cmd}`);
+          handleCommand(cmd);
+          input.value = "";
+        }
+      });
+
+      function handleCommand(cmd) {
+        const lower = cmd.toLowerCase();
+        if (!cmd) return;
+        if (lower === "help") {
+          println("Commandes : help, whoami, time, clear");
+        } else if (lower === "whoami") {
+          println("Tu es l'utilisateur·rice root de cet OS imaginaire. 😈");
+        } else if (lower === "time") {
+          println("Heure actuelle : " + new Date().toLocaleString());
+        } else if (lower === "clear") {
+          out.innerHTML = "";
+        } else {
+          println(`Commande inconnue: ${cmd}`);
+        }
+      }
+
+      setTimeout(() => input.focus(), 0);
+    }
+
+    // === APPLI : MARKDOWN ===================================================
+
+    function simpleMarkdownToHtml(md) {
+      if (!md) return "";
+
+      let html = md;
+
+      html = html
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      html = html.replace(/^### (.*)$/gm, "<h3>$1</h3>");
+      html = html.replace(/^## (.*)$/gm, "<h2>$1</h2>");
+      html = html.replace(/^# (.*)$/gm, "<h1>$1</h1>");
+
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+
+      const blocks = html.split(/\n\s*\n/);
+      html = blocks.map(b => `<p>${b.replace(/\n/g, "<br>")}</p>`).join("");
+
+      return html;
+    }
+
+    function createMarkdownApp(container) {
+      container.innerHTML = `
+        <p><strong>Lecteur Markdown NYXO</strong></p>
+        <p class="helper-text">
+          Colle ton texte Markdown, importe un fichier <code>.md</code> ou exporte ton contenu.
+        </p>
+
+        <div class="oxyn-toolbar" style="margin-top:0.3rem;">
+          <button class="btn-ghost" id="mdImportBtn">📥 Importer .md</button>
+          <button class="btn-ghost" id="mdExportBtn">💾 Exporter .md</button>
+          <input type="file" id="mdFileInput" accept=".md,text/markdown" style="display:none;">
+        </div>
+
+        <div class="md-layout" style="margin-top:0.4rem;">
+          <div class="md-editor">
+            <textarea id="mdEditor" placeholder="# Titre
+
+Un peu de **Markdown** ici.
+- Liste
+- De
+- Test
+
+[Un lien](https://example.org)
+"></textarea>
+          </div>
+          <div class="md-preview">
+            <div class="md-preview-content" id="mdPreview"></div>
+          </div>
+        </div>
+      `;
+
+      const editor = container.querySelector("#mdEditor");
+      const preview = container.querySelector("#mdPreview");
+      const importBtn = container.querySelector("#mdImportBtn");
+      const exportBtn = container.querySelector("#mdExportBtn");
+      const fileInput = container.querySelector("#mdFileInput");
+
+      function refreshPreview() {
+        const md = editor.value;
+        const html = simpleMarkdownToHtml(md);
+        preview.innerHTML = html;
+      }
+
+      editor.addEventListener("input", refreshPreview);
+
+      importBtn.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          editor.value = reader.result || "";
+          refreshPreview();
+        };
+        reader.onerror = () => {
+          alert("Erreur de lecture du fichier Markdown.");
+        };
+        reader.readAsText(file, "utf-8");
+      });
+
+      exportBtn.addEventListener("click", () => {
+        const md = editor.value || "";
+        const defName = "nyxo-notes.md";
+        const filename = prompt("Nom du fichier à exporter :", defName) || defName;
+        triggerDownload(filename, "text/markdown", md);
+      });
+
+      refreshPreview();
+    }
+
+    // === APPLI : NAVIGATEUR INTERNET =======================================
+
+    function normalizeUrl(input) {
+      let url = (input || "").trim();
+      if (!url) return "";
+
+      if (/^javascript:/i.test(url)) {
+        alert("Schéma javascript: bloqué pour des raisons de sécurité.");
+        return "";
+      }
+
+      if (!/^https?:\/\//i.test(url)) {
+        url = "https://" + url;
+      }
+
+      return url;
+    }
+
+    function createBrowserApp(container) {
+      container.innerHTML = `
+        <p><strong>Navigateur NYXO</strong></p>
+        <p class="helper-text">
+          Mini navigateur pédagogique. Certains sites peuvent refuser d’être affichés
+          en iframe (politique de sécurité).
+        </p>
+
+        <div class="browser-toolbar">
+          <button class="btn-ghost" id="navBackBtn" disabled>⬅️</button>
+          <button class="btn-ghost" id="navForwardBtn" disabled>➡️</button>
+          <button class="btn-ghost" id="navHomeBtn">🏠</button>
+          <button class="btn-ghost" id="navReloadBtn">🔄</button>
+          <input type="text" id="navAddress" class="browser-addr"
+                 placeholder="https://… ou domaine (ex: duckduckgo.com)">
+          <button class="btn-ghost" id="navGoBtn">GO</button>
+        </div>
+
+        <div class="browser-status" id="navStatus">
+          Prêt. Tape une URL (par ex. <code>duckduckgo.com</code>) puis appuie sur GO ou Entrée.
+        </div>
+
+        <div class="browser-frame-wrap">
+          <iframe id="navFrame" class="browser-iframe"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                  referrerpolicy="strict-origin-when-cross-origin">
+          </iframe>
+        </div>
+      `;
+
+      const backBtn    = container.querySelector("#navBackBtn");
+      const fwdBtn     = container.querySelector("#navForwardBtn");
+      const homeBtn    = container.querySelector("#navHomeBtn");
+      const reloadBtn  = container.querySelector("#navReloadBtn");
+      const goBtn      = container.querySelector("#navGoBtn");
+      const addrInput  = container.querySelector("#navAddress");
+      const frame      = container.querySelector("#navFrame");
+      const statusEl   = container.querySelector("#navStatus");
+
+      const HOME_URL = "https://duckduckgo.com";
+
+      const history = [];
+      let historyIndex = -1;
+      let currentUrl = "";
+
+      function updateHistoryButtons() {
+        backBtn.disabled = historyIndex <= 0;
+        fwdBtn.disabled  = historyIndex < 0 || historyIndex >= history.length - 1;
+      }
+
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+      }
+
+      function load(url, push = true) {
+        const normalized = normalizeUrl(url);
+        if (!normalized) return;
+
+        currentUrl = normalized;
+        frame.src = normalized;
+        addrInput.value = normalized;
+        setStatus(`Chargement : ${normalized}`);
+
+        if (push) {
+          history.splice(historyIndex + 1);
+          history.push(normalized);
+          historyIndex = history.length - 1;
+          updateHistoryButtons();
+        }
+      }
+
+      backBtn.addEventListener("click", () => {
+        if (historyIndex > 0) {
+          historyIndex--;
+          const url = history[historyIndex];
+          load(url, false);
+        }
+      });
+
+      fwdBtn.addEventListener("click", () => {
+        if (historyIndex < history.length - 1) {
+          historyIndex++;
+          const url = history[historyIndex];
+          load(url, false);
+        }
+      });
+
+      homeBtn.addEventListener("click", () => {
+        load(HOME_URL, true);
+      });
+
+      reloadBtn.addEventListener("click", () => {
+        if (currentUrl) {
+          load(currentUrl, false);
+        }
+      });
+
+      goBtn.addEventListener("click", () => {
+        if (addrInput.value.trim()) {
+          load(addrInput.value, true);
+        }
+      });
+
+      addrInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (addrInput.value.trim()) {
+            load(addrInput.value, true);
+          }
+        }
+      });
+
+      frame.addEventListener("load", () => {
+        if (currentUrl) {
+          setStatus(`Page chargée : ${currentUrl}`);
+        } else {
+          setStatus("Prêt.");
+        }
+      });
+
+      load(HOME_URL, true);
+    }
+
+    // === TABLEAU DES APPLIS ================================================
+
+    const APPS = [
+      { id: "about",    name: "À propos",   icon: "💻", open: createAboutApp },
+      { id: "notes",    name: "Bloc-notes", icon: "📝", open: createNotesApp },
+      { id: "explorer", name: "Explorateur",icon: "📁", open: createExplorerApp },
+      { id: "viewer",   name: "Oxyn",       icon: "🧬", open: createViewerApp },
+      { id: "markdown", name: "Markdown",   icon: "📚", open: createMarkdownApp },
+      { id: "browser",  name: "Navigateur", icon: "🌐", open: createBrowserApp },
+      { id: "cyber",    name: "Alerte Cyber", icon: "🚨", open: createCyberApp },
+      { id: "kali",     name: "Mode Kali",  icon: "🐉", open: createKaliApp },
+      { id: "settings", name: "Paramètres", icon: "⚙️", open: createSettingsApp },
+      { id: "terminal", name: "Console",    icon: ">_", open: createTerminalApp }
+    ];
+
+    // === INIT BUREAU & MENU ================================================
+
+    function initDesktopIcons() {
+      APPS.forEach(app => {
+        const icon = document.createElement("div");
+        icon.className = "desktop-icon";
+        icon.innerHTML = `
+          <div class="desktop-icon-emoji">${app.icon}</div>
+          <div class="desktop-icon-label">${app.name}</div>
+        `;
+        icon.addEventListener("dblclick", () => createWindow(app));
+        icon.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          createWindow(app);
+        });
+        $desktop.appendChild(icon);
+      });
+    }
+
+    function initStartMenu() {
+      APPS.forEach(app => {
+        const div = document.createElement("div");
+        div.className = "start-app";
+        div.innerHTML = `
+          <span class="icon">${app.icon}</span>
+          <span class="label">${app.name}</span>
+        `;
+        div.addEventListener("click", () => {
+          createWindow(app);
+          toggleStartMenu(true);
+        });
+        $startAppGrid.appendChild(div);
+      });
+    }
+
+    const savedWallpaper = localStorage.getItem(WALLPAPER_KEY);
+    if (savedWallpaper) applyWallpaper(savedWallpaper);
+    else applyWallpaper("dark-neon");
+
+    initDesktopIcons();
+    initStartMenu();
+
+    // Ouvre la fenêtre "À propos" au démarrage
+    createWindow(APPS.find(a => a.id === "about"));
+  </script>
+</body>
+</html>
